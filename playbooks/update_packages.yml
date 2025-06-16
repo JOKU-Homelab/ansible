@@ -1,0 +1,9 @@
+---
+- name: Update Packages
+  hosts: "{{ hostnames }}"
+  tasks:
+    - name: Update Packages
+      ansible.builtin.dnf:
+        name: '*'
+        state: latest
+      become: true

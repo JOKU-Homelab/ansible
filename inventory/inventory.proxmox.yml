@@ -1,0 +1,22 @@
+---
+plugin: community.general.proxmox
+url: "https://prdpve01.jokulab.ch:8006"
+validate_certs: false
+
+user: "joku@pve"
+token_id: "ansible"
+token_secret: "ed7eeb75-f0dc-4fa2-a2a0-da81e94dece3"
+
+want_facts: true
+want_proxmox_nodes_ansible_host: true
+leading_separator: false
+use_extra_vars: true
+
+filters:
+  - proxmox_status == "running"
+
+keyed_groups:
+  - key: proxmox_tags_parsed | list
+
+compose:
+  ansible_host: proxmox_agent_interfaces[1]["ip-addresses"][0].split('/')[0] | default(proxmox_name)

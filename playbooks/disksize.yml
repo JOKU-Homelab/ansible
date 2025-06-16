@@ -1,0 +1,14 @@
+---
+- name: Check Disk Size
+  hosts: "{{ hostnames }}"
+
+  tasks:
+    - name: Get disk facts
+      ansible.builtin.disk_info:
+        get_mounts: yes
+      register: disk_facts
+
+    - name: Display disk size
+      ansible.builtin.debug:
+        msg: "Disk {{ item.mount }} has {{ item.size_total }} total size and {{ item.size_available }} available size"
+      loop: "{{ disk_facts.disks }}"
