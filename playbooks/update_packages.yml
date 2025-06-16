@@ -1,6 +1,6 @@
 ---
 - name: Update Packages
-  hosts: "{{ hostnames }}"
+  hosts: "{{ hostname }}"
   tasks:
     - name: Update Packages
       ansible.builtin.dnf:
