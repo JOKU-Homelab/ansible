@@ -1,0 +1,14 @@
+---
+# Development PostgreSQL server configuration
+postgresql_max_connections: 100
+postgresql_shared_buffers: "128MB"
+postgresql_effective_cache_size: "512MB"
+postgresql_work_mem: "2MB"
+postgresql_maintenance_work_mem: "32MB"
+
+# Development-specific logging
+postgresql_log_min_duration_statement: 100
+postgresql_log_statement: "all"
+
+# Reduced backup retention for dev
+postgresql_backup_retention_days: 7

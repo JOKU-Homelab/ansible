@@ -1,0 +1,20 @@
+---
+# PostgreSQL role configuration
+postgresql_monitoring_enabled: true
+postgresql_backup_enabled: true
+postgresql_backup_time: "02:00"
+postgresql_backup_retention_days: 30
+postgresql_firewall_enabled: true
+
+# Network configuration
+postgresql_internal_networks:
+  - "192.168.1.0/24"
+postgresql_dmz_networks:
+  - "192.168.100.0/24"
+
+# Performance tuning (will be overridden by host_vars)
+postgresql_max_connections: 200
+postgresql_shared_buffers: "256MB"
+postgresql_effective_cache_size: "1GB"
+postgresql_work_mem: "4MB"
+postgresql_maintenance_work_mem: "64MB"

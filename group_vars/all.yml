@@ -1,0 +1,15 @@
+# Timezone
+system_timezone: "Europe/Zurich"
+
+# Firewall zones
+internal_zone: "internal"
+dmz_zone: "dmz"
+
+# Monitoring server
+monitoring_server: "192.168.1.25"
+
+# Database credentials (reference vault variables)
+trackify_db_name: "trackify"
+trackify_db_user: "trackify_user"
+trackify_db_password: "{{ vault_trackify_db_password }}"
+postgresql_exporter_password: "{{ vault_postgres_exporter_password }}"

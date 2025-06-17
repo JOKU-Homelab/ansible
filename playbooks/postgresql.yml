@@ -2,6 +2,21 @@
 - name: Deploy PostgreSQL for Trackify
   hosts: "{{ hostname }}"
   become: true
+  gather_facts: true
+  
+  pre_tasks:
+    - name: Install required Python packages
+      package:
+        name:
+          - python3-psycopg2
+          - python3-pip
+        state: present
+
+    - name: Install required Python modules via pip
+      pip:
+        name:
+          - psycopg2-binary
+        state: present
   
   roles:
     - role: postgresql
