@@ -1,0 +1,5 @@
+---
+- hosts: "{{ hostname }}"
+  become: true
+  roles:
+    - role: nginx

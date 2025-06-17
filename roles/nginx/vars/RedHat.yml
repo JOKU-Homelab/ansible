@@ -1,0 +1,4 @@
+
+---
+nginx_service_name: nginx
+nginx_config_test_command: "nginx -t"

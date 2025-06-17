@@ -1,0 +1,31 @@
+
+---
+- name: Install Node.js repository
+  dnf:
+    name: "https://rpm.nodesource.com/pub_{{ nodejs_version }}.x/nodistro/repo/nodesource-release-nodistro-1.noarch.rpm"
+    state: present
+    disable_gpg_check: yes
+  tags: nginx_nodejs
+
+- name: Install Node.js and development tools
+  dnf:
+    name: "{{ nodejs_packages }}"
+    state: present
+  tags: nginx_nodejs
+
+- name: Install global npm packages
+  npm:
+    name: "{{ item }}"
+    global: yes
+    state: present
+  loop: "{{ nodejs_global_packages }}"
+  tags: nginx_nodejs
+
+- name: Create application source directory
+  file:
+    path: "{{ trackify_source_dir }}"
+    state: directory
+    owner: "{{ nginx_user }}"
+    group: "{{ nginx_group }}"
+    mode: '0755'
+  tags: nginx_nodejs

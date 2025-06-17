@@ -1,0 +1,25 @@
+---
+- name: Include OS-specific variables
+  include_vars: "{{ ansible_os_family }}.yml"
+  tags: nginx
+
+- name: Include installation tasks
+  include_tasks: install.yml
+  tags: nginx
+
+- name: Include Node.js setup tasks
+  include_tasks: nodejs.yml
+  tags: nginx
+
+- name: Include application build tasks
+  include_tasks: build.yml
+  tags: nginx
+
+- name: Include configuration tasks
+  include_tasks: configure.yml
+  tags: nginx
+
+- name: Include firewall configuration tasks
+  include_tasks: firewall.yml
+  tags: nginx
+  when: nginx_configure_firewall

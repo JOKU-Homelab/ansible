@@ -1,0 +1,68 @@
+
+user {{ nginx_user }};
+worker_processes {{ nginx_worker_processes }};
+error_log {{ nginx_log_dir }}/error.log {{ nginx_error_log_level }};
+pid {{ nginx_pid_dir }}/nginx.pid;
+
+# Load dynamic modules
+include /usr/share/nginx/modules/*.conf;
+
+events {
+    worker_connections {{ nginx_worker_connections }};
+    use epoll;
+    multi_accept on;
+}
+
+http {
+    log_format main {{ nginx_access_log_format }};
+
+    access_log {{ nginx_log_dir }}/access.log main;
+
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout {{ nginx_keepalive_timeout }};
+    types_hash_max_size 2048;
+    server_tokens {{ 'on' if nginx_server_tokens else 'off' }};
+    client_max_body_size {{ nginx_client_max_body_size }};
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+{% if nginx_gzip_enabled %}
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_types
+        text/plain
+        text/css
+        text/xml
+        text/javascript
+        application/json
+        application/javascript
+        application/xml+rss
+        application/atom+xml
+        image/svg+xml;
+{% endif %}
+
+    # Security headers
+    add_header X-Frame-Options DENY always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Rate limiting for general requests
+    limit_req_zone $binary_remote_addr zone=general:10m rate=10r/s;
+
+    # Real IP configuration for Traefik
+    set_real_ip_from 192.168.1.0/24;
+    set_real_ip_from 192.168.100.0/24;
+    real_ip_header X-Forwarded-For;
+    real_ip_recursive on;
+
+    # Include additional configurations
+    include {{ nginx_conf_dir }}/conf.d/*.conf;
+    include {{ nginx_conf_dir }}/sites-enabled/*;
+}

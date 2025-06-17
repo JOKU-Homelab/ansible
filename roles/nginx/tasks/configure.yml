@@ -1,0 +1,66 @@
+
+---
+- name: Generate main nginx configuration
+  template:
+    src: nginx.conf.j2
+    dest: "{{ nginx_conf_dir }}/nginx.conf"
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  notify: restart nginx
+  tags: nginx_config
+
+- name: Generate Trackify site configuration
+  template:
+    src: trackify.conf.j2
+    dest: "{{ nginx_conf_dir }}/sites-available/trackify.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart nginx
+  tags: nginx_config
+
+- name: Enable Trackify site
+  file:
+    src: "{{ nginx_conf_dir }}/sites-available/trackify.conf"
+    dest: "{{ nginx_conf_dir }}/sites-enabled/trackify.conf"
+    state: link
+  notify: restart nginx
+  tags: nginx_config
+
+- name: Remove default nginx configuration
+  file:
+    path: "{{ nginx_conf_dir }}/conf.d/default.conf"
+    state: absent
+  notify: restart nginx
+  tags: nginx_config
+
+- name: Configure logrotate for nginx
+  template:
+    src: nginx.logrotate.j2
+    dest: /etc/logrotate.d/nginx
+    owner: root
+    group: root
+    mode: '0644'
+  tags: nginx_config
+
+- name: Configure SELinux for nginx (if enabled)
+  seboolean:
+    name: "{{ item }}"
+    state: yes
+    persistent: yes
+  loop:
+    - httpd_can_network_connect
+    - httpd_can_network_relay
+  when: 
+    - ansible_selinux.status == "enabled"
+    - nginx_selinux_enabled
+  tags: nginx_config
+
+- name: Validate nginx configuration
+  command: nginx -t
+  register: nginx_syntax_check
+  changed_when: false
+  failed_when: nginx_syntax_check.rc != 0
+  tags: nginx_config

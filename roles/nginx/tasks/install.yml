@@ -1,0 +1,57 @@
+---
+- name: Install NGINX and dependencies
+  dnf:
+    name: "{{ nginx_packages }}"
+    state: present
+  tags: nginx_install
+
+- name: Create nginx user and group
+  group:
+    name: "{{ nginx_group }}"
+    state: present
+  tags: nginx_install
+
+- name: Create nginx user
+  user:
+    name: "{{ nginx_user }}"
+    group: "{{ nginx_group }}"
+    system: yes
+    shell: /sbin/nologin
+    home: "{{ nginx_home_dir }}"
+    createhome: no
+  tags: nginx_install
+
+- name: Create nginx directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ nginx_user }}"
+    group: "{{ nginx_group }}"
+    mode: '0755'
+  loop:
+    - "{{ nginx_conf_dir }}"
+    - "{{ nginx_conf_dir }}/conf.d"
+    - "{{ nginx_conf_dir }}/sites-available"
+    - "{{ nginx_conf_dir }}/sites-enabled"
+    - "{{ nginx_log_dir }}"
+    - "{{ nginx_cache_dir }}"
+    - "{{ nginx_pid_dir }}"
+  tags: nginx_install
+
+- name: Create application directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ nginx_user }}"
+    group: "{{ nginx_group }}"
+    mode: '0755'
+  loop: "{{ nginx_document_roots }}"
+  tags: nginx_install
+
+- name: Start and enable nginx service
+  systemd:
+    name: nginx
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  tags: nginx_install

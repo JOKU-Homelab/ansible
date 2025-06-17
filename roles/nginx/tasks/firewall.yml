@@ -1,0 +1,11 @@
+
+---
+- name: Configure firewall for NGINX HTTP
+  firewalld:
+    port: "80/tcp"
+    permanent: yes
+    state: enabled
+    zone: public
+    immediate: yes
+  notify: reload firewalld
+  tags: nginx_firewall

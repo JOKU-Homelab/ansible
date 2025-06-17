@@ -1,0 +1,21 @@
+
+---
+galaxy_info:
+  author: Trackify Team
+  description: NGINX web server role for Trackify React frontend with build capabilities
+  company: Trackit ltd.
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+  galaxy_tags:
+    - nginx
+    - webserver
+    - react
+    - frontend
+    - trackify
+
+dependencies: []
