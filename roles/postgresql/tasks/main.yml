@@ -4,6 +4,10 @@
   include_vars: "{{ ansible_os_family }}.yml"
   tags: postgresql
 
+- name: Include locale setup tasks
+  include_tasks: locale-setup.yml
+  tags: postgresql
+
 - name: Include installation tasks
   include_tasks: install.yml
   tags: postgresql

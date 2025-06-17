@@ -1,0 +1,31 @@
+
+---
+- name: Install locale packages
+  dnf:
+    name:
+      - glibc-langpack-en
+      - glibc-locale-source
+    state: present
+  tags: postgresql_locale
+
+- name: Check available system locales
+  shell: locale -a | grep -E "(UTF-?8|utf-?8)" | head -1 || echo "C"
+  register: available_utf8_locale
+  changed_when: false
+  tags: postgresql_locale
+
+- name: Generate en_US.UTF-8 locale if not available
+  shell: localedef -c -i en_US -f UTF-8 en_US.UTF-8
+  when: "'en_US.utf8' not in available_utf8_locale.stdout"
+  ignore_errors: true
+  tags: postgresql_locale
+
+- name: Set PostgreSQL locale fact
+  set_fact:
+    postgresql_effective_locale: "{{ available_utf8_locale.stdout if available_utf8_locale.stdout != 'C' else 'C' }}"
+  tags: postgresql_locale
+
+- name: Display locale selection
+  debug:
+    msg: "PostgreSQL will use locale: {{ postgresql_effective_locale }}"
+  tags: postgresql_locale
