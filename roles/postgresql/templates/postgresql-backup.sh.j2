@@ -72,8 +72,11 @@ log "Backup process completed successfully"
 
 # Send backup status to monitoring (if available)
 if command -v curl >/dev/null 2>&1; then
-    curl -s -X POST "http://{{ hostvars[groups['monitoring'][0]]['ansible_host'] | default('192.168.1.25') }}:9091/metrics/job/postgresql_backup/instance/{{ inventory_hostname }}" \
+    {% set monitoring_host = '192.168.1.25' %}
+    {% if groups is defined and 'monitoring' in groups and groups['monitoring']|length > 0 %}
+    {% set monitoring_host = hostvars[groups['monitoring'][0]]['ansible_host'] | default('192.168.1.25') %}
+    {% endif %}
+    curl -s -X POST "http://{{ monitoring_host }}:9091/metrics/job/postgresql_backup/instance/{{ inventory_hostname }}" \
          --data-binary @- <<EOF || true
 postgresql_backup_success 1
 postgresql_backup_timestamp $(date +%s)
-EOF

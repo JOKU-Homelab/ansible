@@ -18,7 +18,7 @@ host    all             all             {{ network }}           {{ postgresql_pa
 # Allow application connections from DMZ network: {{ network }}
 {% for db in postgresql_databases %}
 {% for user in postgresql_users %}
-{% if user.db == db.name %}
+{% if user.db is defined and db.name is defined and user.db == db.name %}
 host    {{ db.name }}    {{ user.name }}    {{ network }}        {{ postgresql_password_encryption }}
 {% endif %}
 {% endfor %}
@@ -33,5 +33,9 @@ host    replication     postgres        {{ network }}           {{ postgresql_pa
 {% if postgresql_monitoring_enabled %}
 # Monitoring user for PostgreSQL Exporter
 host    postgres        {{ postgresql_exporter_user }}    127.0.0.1/32       {{ postgresql_password_encryption }}
-host    postgres        {{ postgresql_exporter_user }}    {{ hostvars[groups['monitoring'][0]]['ansible_host'] | default('192.168.1.25') }}/32    {{ postgresql_password_encryption }}
+{% set monitoring_host = '192.168.1.25' %}
+{% if groups is defined and 'monitoring' in groups and groups['monitoring']|length > 0 %}
+{% set monitoring_host = hostvars[groups['monitoring'][0]]['ansible_host'] | default('192.168.1.25') %}
+{% endif %}
+host    postgres        {{ postgresql_exporter_user }}    {{ monitoring_host }}/32    {{ postgresql_password_encryption }}
 {% endif %}
