@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: Trackify Team
+  description: PostgreSQL installation and configuration for Trackify application
+  company: Trackit Ltd.
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: EL
+      versions:
+        - "9"
+  galaxy_tags:
+    - database
+    - postgresql
+    - monitoring
+
+dependencies: []

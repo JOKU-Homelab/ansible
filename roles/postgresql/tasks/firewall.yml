@@ -1,0 +1,22 @@
+
+---
+- name: Configure firewall for PostgreSQL
+  firewalld:
+    port: "{{ postgresql_port }}/tcp"
+    permanent: yes
+    state: enabled
+    zone: internal
+    immediate: yes
+  notify: reload firewalld
+  tags: postgresql_firewall
+
+- name: Configure firewall for PostgreSQL Exporter
+  firewalld:
+    port: "{{ postgresql_exporter_port }}/tcp"
+    permanent: yes
+    state: enabled
+    zone: internal
+    immediate: yes
+  notify: reload firewalld
+  when: postgresql_monitoring_enabled
+  tags: postgresql_firewall

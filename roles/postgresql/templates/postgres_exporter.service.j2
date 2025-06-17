@@ -1,0 +1,25 @@
+[Unit]
+Description=PostgreSQL Exporter for Prometheus
+Wants=network-online.target
+After=network-online.target
+After={{ postgresql_service_name }}.service
+
+[Service]
+Type=simple
+User={{ postgresql_exporter_user }}
+Group={{ postgresql_exporter_user }}
+EnvironmentFile={{ postgresql_exporter_config_path }}
+ExecStart={{ postgresql_exporter_binary_path }}
+SyslogIdentifier=postgres_exporter
+Restart=always
+RestartSec=5
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/tmp
+
+[Install]
+WantedBy=multi-user.target

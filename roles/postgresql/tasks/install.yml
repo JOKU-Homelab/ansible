@@ -1,0 +1,42 @@
+
+---
+- name: Install PostgreSQL repository
+  dnf:
+    name: "https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
+    state: present
+    disable_gpg_check: yes
+  tags: postgresql_install
+
+- name: Install PostgreSQL packages
+  dnf:
+    name: "{{ postgresql_packages }}"
+    state: present
+  tags: postgresql_install
+
+- name: Check if PostgreSQL database is initialized
+  stat:
+    path: "{{ postgresql_data_dir }}/PG_VERSION"
+  register: pgdata_dir_version
+  tags: postgresql_install
+
+- name: Initialize PostgreSQL database
+  command: "/usr/pgsql-{{ postgresql_version }}/bin/postgresql-{{ postgresql_version }}-setup initdb"
+  when: not pgdata_dir_version.stat.exists
+  notify: restart postgresql
+  tags: postgresql_install
+
+- name: Create log directory
+  file:
+    path: "{{ postgresql_log_dir }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0755'
+  tags: postgresql_install
+
+- name: Start and enable PostgreSQL service
+  systemd:
+    name: "{{ postgresql_service_name }}"
+    state: started
+    enabled: yes
+  tags: postgresql_install

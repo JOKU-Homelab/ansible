@@ -1,0 +1,32 @@
+
+---
+- name: Include OS-specific variables
+  include_vars: "{{ ansible_os_family }}.yml"
+  tags: postgresql
+
+- name: Include installation tasks
+  include_tasks: install.yml
+  tags: postgresql
+
+- name: Include configuration tasks
+  include_tasks: configure.yml
+  tags: postgresql
+
+- name: Include database setup tasks
+  include_tasks: databases.yml
+  tags: postgresql
+
+- name: Include monitoring setup tasks
+  include_tasks: monitoring.yml
+  tags: postgresql
+  when: postgresql_monitoring_enabled
+
+- name: Include backup setup tasks
+  include_tasks: backup.yml
+  tags: postgresql
+  when: postgresql_backup_enabled
+
+- name: Include firewall configuration tasks
+  include_tasks: firewall.yml
+  tags: postgresql
+  when: postgresql_firewall_enabled

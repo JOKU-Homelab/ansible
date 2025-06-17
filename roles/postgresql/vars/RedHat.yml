@@ -1,0 +1,6 @@
+---
+# RedHat/AlmaLinux specific variables
+postgresql_repo_rpm_url: "https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
+postgresql_service_name: "postgresql-{{ postgresql_version }}"
+postgresql_config_path: "/var/lib/pgsql/{{ postgresql_version }}/data"
+postgresql_bin_path: "/usr/pgsql-{{ postgresql_version }}/bin"

@@ -1,0 +1,39 @@
+
+---
+- name: Create backup directory
+  file:
+    path: "{{ postgresql_backup_dir }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0750'
+  tags: postgresql_backup
+
+- name: Install backup script
+  template:
+    src: postgresql-backup.sh.j2
+    dest: /usr/local/bin/postgresql-backup.sh
+    mode: '0750'
+    owner: postgres
+    group: postgres
+  tags: postgresql_backup
+
+- name: Setup backup cron job
+  cron:
+    name: "PostgreSQL Daily Backup"
+    minute: "{{ postgresql_backup_time.split(':')[1] }}"
+    hour: "{{ postgresql_backup_time.split(':')[0] }}"
+    job: "/usr/local/bin/postgresql-backup.sh"
+    user: postgres
+    state: present
+  tags: postgresql_backup
+
+- name: Setup backup cleanup cron job
+  cron:
+    name: "PostgreSQL Backup Cleanup"
+    minute: "30"
+    hour: "{{ postgresql_backup_time.split(':')[0] }}"
+    job: "find {{ postgresql_backup_dir }} -name '*.sql.gz' -mtime +{{ postgresql_backup_retention_days }} -delete"
+    user: postgres
+    state: present
+  tags: postgresql_backup

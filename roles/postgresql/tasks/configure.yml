@@ -1,0 +1,30 @@
+
+---
+- name: Configure PostgreSQL - postgresql.conf
+  template:
+    src: postgresql.conf.j2
+    dest: "{{ postgresql_config_dir }}/postgresql.conf"
+    owner: postgres
+    group: postgres
+    mode: '0600'
+    backup: yes
+  notify: restart postgresql
+  tags: postgresql_config
+
+- name: Configure PostgreSQL - pg_hba.conf
+  template:
+    src: pg_hba.conf.j2
+    dest: "{{ postgresql_config_dir }}/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: '0600'
+    backup: yes
+  notify: restart postgresql
+  tags: postgresql_config
+
+- name: Setup log rotation for PostgreSQL
+  template:
+    src: postgresql.logrotate.j2
+    dest: /etc/logrotate.d/postgresql
+    mode: '0644'
+  tags: postgresql_config

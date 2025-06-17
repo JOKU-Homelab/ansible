@@ -1,0 +1,14 @@
+
+---
+# Internal variables (should not be overridden)
+postgresql_service_name: "postgresql-{{ postgresql_version }}"
+postgresql_packages:
+  - "postgresql{{ postgresql_version }}-server"
+  - "postgresql{{ postgresql_version }}"
+  - "postgresql{{ postgresql_version }}-contrib"
+  - "python3-psycopg2"
+
+postgresql_exporter_download_url: "https://github.com/prometheus-community/postgres_exporter/releases/download/v{{ postgresql_exporter_version }}/postgres_exporter-{{ postgresql_exporter_version }}.linux-amd64.tar.gz"
+postgresql_exporter_binary_path: "/usr/local/bin/postgres_exporter"
+postgresql_exporter_config_path: "/etc/default/postgres_exporter"
+postgresql_exporter_service_path: "/etc/systemd/system/postgres_exporter.service"

@@ -1,0 +1,8 @@
+---
+- name: Deploy PostgreSQL for Trackify
+  hosts: "{{ hostname }}"
+  become: true
+  
+  roles:
+    - role: postgresql
+      tags: postgresql

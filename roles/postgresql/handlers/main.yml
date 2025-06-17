@@ -1,0 +1,24 @@
+
+---
+- name: restart postgresql
+  systemd:
+    name: "{{ postgresql_service_name }}"
+    state: restarted
+    enabled: yes
+
+- name: reload postgresql
+  systemd:
+    name: "{{ postgresql_service_name }}"
+    state: reloaded
+
+- name: restart postgres_exporter
+  systemd:
+    name: postgres_exporter
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+
+- name: reload firewalld
+  systemd:
+    name: firewalld
+    state: reloaded
