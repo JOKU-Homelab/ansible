@@ -40,7 +40,6 @@
     role_attr_flags: LOGIN
     state: present
   become_user: postgres
-  no_log: true
   tags: postgresql_monitoring
 
 - name: Grant monitoring privileges to exporter user

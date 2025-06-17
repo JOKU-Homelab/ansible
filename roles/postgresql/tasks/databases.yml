@@ -23,7 +23,6 @@
     state: present
   become_user: postgres
   loop: "{{ postgresql_users }}"
-  no_log: true
   tags: postgresql_databases
 
 - name: Grant database privileges to users
