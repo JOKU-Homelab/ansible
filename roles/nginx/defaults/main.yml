@@ -30,14 +30,13 @@ nginx_document_roots:
 nodejs_version: "20"
 nodejs_packages:
   - nodejs
-  - npm
   - gcc-c++
   - make
   - git
 
 nodejs_global_packages:
   - yarn
-
+  
 # Trackify application configuration
 trackify_git_repo: "https://github.com/bbzbl-it-joku/Module306-Frontend.git"  # Update with actual repo
 trackify_source_dir: /opt/trackify-frontend

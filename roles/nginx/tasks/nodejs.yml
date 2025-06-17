@@ -1,16 +1,47 @@
 
 ---
-- name: Install Node.js repository
+- name: Remove conflicting nodejs packages
   dnf:
-    name: "https://rpm.nodesource.com/pub_{{ nodejs_version }}.x/nodistro/repo/nodesource-release-nodistro-1.noarch.rpm"
-    state: present
-    disable_gpg_check: yes
+    name:
+      - nodejs
+      - npm
+    state: absent
+  ignore_errors: true
+  tags: nginx_nodejs
+
+- name: Install Node.js repository
+  get_url:
+    url: "https://rpm.nodesource.com/setup_{{ nodejs_version }}.x"
+    dest: /tmp/nodesource_setup.sh
+    mode: '0755'
+  tags: nginx_nodejs
+
+- name: Run Node.js repository setup script
+  command: bash /tmp/nodesource_setup.sh
+  args:
+    creates: /etc/yum.repos.d/nodesource-el9.repo
+  tags: nginx_nodejs
+
+- name: Clean DNF cache after repository addition
+  command: dnf clean all
   tags: nginx_nodejs
 
 - name: Install Node.js and development tools
   dnf:
     name: "{{ nodejs_packages }}"
     state: present
+    update_cache: yes
+  tags: nginx_nodejs
+
+- name: Verify Node.js installation
+  command: node --version
+  register: node_version_check
+  changed_when: false
+  tags: nginx_nodejs
+
+- name: Display Node.js version
+  debug:
+    msg: "Node.js version installed: {{ node_version_check.stdout }}"
   tags: nginx_nodejs
 
 - name: Install global npm packages
@@ -28,4 +59,10 @@
     owner: "{{ nginx_user }}"
     group: "{{ nginx_group }}"
     mode: '0755'
+  tags: nginx_nodejs
+
+- name: Clean up setup script
+  file:
+    path: /tmp/nodesource_setup.sh
+    state: absent
   tags: nginx_nodejs
