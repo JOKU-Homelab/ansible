@@ -18,8 +18,8 @@ postgresql_users:
   - name: "{{ trackify_db_user | default('trackify_user') }}"
     password: "{{ trackify_db_password }}"
     db: "{{ trackify_db_name | default('trackify') }}"
-    priv: "ALL"
     expires: "infinity"
+    role_attr_flags: "NOSUPERUSER,NOCREATEDB"
 
 # Locale configuration
 postgresql_locale: "C"  # Safe default that works everywhere

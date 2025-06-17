@@ -1,24 +1,39 @@
 
 ---
-- name: Create PostgreSQL databases with effective locale
+- name: Check available locales
+  shell: locale -a | grep -E "(UTF-8|utf8)" | head -1 || echo "C"
+  register: system_locales
+  changed_when: false
+  tags: postgresql_databases
+
+- name: Set locale facts
+  set_fact:
+    postgresql_detected_locale: "{{ system_locales.stdout_lines[0] | default('C') }}"
+  tags: postgresql_databases
+
+- name: Display detected locale
+  debug:
+    msg: "Using locale: {{ postgresql_detected_locale }}"
+  tags: postgresql_databases
+
+- name: Create PostgreSQL databases
   postgresql_db:
     name: "{{ item.name }}"
     encoding: "{{ item.encoding | default('UTF8') }}"
-    lc_collate: "{{ postgresql_effective_locale | default('C') }}"
-    lc_ctype: "{{ postgresql_effective_locale | default('C') }}"
+    lc_collate: "{{ postgresql_detected_locale }}"
+    lc_ctype: "{{ postgresql_detected_locale }}"
     template: "{{ item.template | default('template0') }}"
     state: present
   become_user: postgres
   loop: "{{ postgresql_databases }}"
   tags: postgresql_databases
 
-- name: Create PostgreSQL users
+- name: Create PostgreSQL users (without priv parameter)
   postgresql_user:
     name: "{{ item.name }}"
     password: "{{ item.password }}"
-    db: "{{ item.db | default(omit) }}"
-    priv: "{{ item.priv | default(omit) }}"
-    role_attr_flags: "{{ item.role_attr_flags | default(omit) }}"
+    login_db: "{{ item.db | default('postgres') }}"
+    role_attr_flags: "{{ item.role_attr_flags | default('NOSUPERUSER,NOCREATEDB') }}"
     expires: "{{ item.expires | default('infinity') }}"
     state: present
   become_user: postgres
@@ -28,12 +43,53 @@
 - name: Grant database privileges to users
   postgresql_privs:
     db: "{{ item.db }}"
-    privs: "{{ item.priv }}"
+    privs: ALL
     type: database
     obj: "{{ item.db }}"
     role: "{{ item.name }}"
     state: present
   become_user: postgres
   loop: "{{ postgresql_users }}"
-  when: item.db is defined and item.priv is defined
+  when: item.db is defined
+  tags: postgresql_databases
+
+- name: Grant schema privileges to users
+  postgresql_privs:
+    db: "{{ item.db }}"
+    privs: ALL
+    type: schema
+    obj: public
+    role: "{{ item.name }}"
+    state: present
+  become_user: postgres
+  loop: "{{ postgresql_users }}"
+  when: item.db is defined
+  tags: postgresql_databases
+
+- name: Grant table privileges to users
+  postgresql_privs:
+    db: "{{ item.db }}"
+    privs: ALL
+    type: table
+    objs: ALL_IN_SCHEMA
+    schema: public
+    role: "{{ item.name }}"
+    state: present
+  become_user: postgres
+  loop: "{{ postgresql_users }}"
+  when: item.db is defined
+  tags: postgresql_databases
+
+- name: Grant sequence privileges to users
+  postgresql_privs:
+    db: "{{ item.db }}"
+    privs: ALL
+    type: sequence
+    objs: ALL_IN_SCHEMA
+    schema: public
+    role: "{{ item.name }}"
+    state: present
+  become_user: postgres
+  loop: "{{ postgresql_users }}"
+  when: item.db is defined
   tags: postgresql_databases
