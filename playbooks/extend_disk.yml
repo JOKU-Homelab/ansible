@@ -1,5 +1,5 @@
 ---
-- name: Simple disk extension for LVM setup
+- name: Robust disk extension for LVM setup
   hosts: "{{ hostname }}"
   become: true
   gather_facts: true
@@ -14,85 +14,171 @@
       debug:
         var: current_usage.stdout_lines
 
-    - name: Get primary disk name
-      shell: lsblk -no PKNAME $(df / | tail -1 | awk '{print $1}') | head -1
-      register: root_disk
+    - name: Get root filesystem device
+      shell: df / | tail -1 | awk '{print $1}'
+      register: root_device
       changed_when: false
 
-    - name: Get last partition number on root disk
-      shell: "lsblk -no NAME /dev/{{ root_disk.stdout }} | grep -E '[0-9]$' | tail -1 | grep -o '[0-9]*$'"
-      register: last_partition_num
+    - name: Get LVM physical volume information
+      shell: "pvs --noheadings -o pv_name,vg_name,pv_size,pv_free --separator='|'"
+      register: pv_info
       changed_when: false
 
-    - name: Set partition device name
-      set_fact:
-        partition_device: "/dev/{{ root_disk.stdout }}{{ last_partition_num.stdout }}"
-        disk_device: "/dev/{{ root_disk.stdout }}"
-
-    - name: Show what we found
+    - name: Display PV information
       debug:
-        msg: "Working with disk {{ disk_device }}, partition {{ partition_device }}"
+        msg: "Physical Volumes: {{ pv_info.stdout_lines }}"
 
-    - name: Check for unallocated space
-      shell: "parted {{ disk_device }} print free | grep -i 'free space' | wc -l"
-      register: free_space_count
+    - name: Extract physical volume device
+      set_fact:
+        pv_device: "{{ pv_info.stdout_lines[0].split('|')[0].strip() }}"
+
+    - name: Get disk and partition information
+      shell: "lsblk -no NAME,TYPE,SIZE {{ pv_device }}"
+      register: lsblk_info
       changed_when: false
 
-    - name: Extend partition if there's free space
+    - name: Find parent disk
+      shell: "lsblk -no PKNAME {{ pv_device }} | head -1"
+      register: parent_disk
+      changed_when: false
+
+    - name: Set disk and partition facts
+      set_fact:
+        partition_device: "{{ pv_device }}"
+        disk_device: "/dev/{{ parent_disk.stdout }}"
+        partition_number: "{{ pv_device | regex_search('[0-9]+$') }}"
+
+    - name: Show detected devices
+      debug:
+        msg: 
+          - "Root LV: {{ root_device.stdout }}"
+          - "Physical Volume: {{ partition_device }}"
+          - "Parent Disk: {{ disk_device }}"
+          - "Partition Number: {{ partition_number }}"
+
+    - name: Get disk size information
+      shell: "lsblk -b -no SIZE {{ disk_device }}"
+      register: disk_size_bytes
+      changed_when: false
+
+    - name: Get partition size information  
+      shell: "lsblk -b -no SIZE {{ partition_device }}"
+      register: partition_size_bytes
+      changed_when: false
+
+    - name: Calculate available space
+      set_fact:
+        disk_size_gb: "{{ (disk_size_bytes.stdout | int / 1024 / 1024 / 1024) | round(2) }}"
+        partition_size_gb: "{{ (partition_size_bytes.stdout | int / 1024 / 1024 / 1024) | round(2) }}"
+        available_space_bytes: "{{ disk_size_bytes.stdout | int - partition_size_bytes.stdout | int }}"
+        available_space_gb: "{{ ((disk_size_bytes.stdout | int - partition_size_bytes.stdout | int) / 1024 / 1024 / 1024) | round(2) }}"
+
+    - name: Display space information
+      debug:
+        msg:
+          - "Total disk size: {{ disk_size_gb }}GB"
+          - "Current partition size: {{ partition_size_gb }}GB" 
+          - "Available to extend: {{ available_space_gb }}GB"
+
+    - name: Check if extension is needed
+      set_fact:
+        needs_extension: "{{ available_space_gb | float > 0.1 }}"
+
+    - name: Skip if no space to extend
+      debug:
+        msg: "No significant space available to extend ({{ available_space_gb }}GB). Skipping extension."
+      when: not needs_extension
+
+    - name: Extend disk when space is available
       block:
+        - name: Show what will be extended
+          debug:
+            msg: "Will extend {{ partition_device }} on {{ disk_device }} by {{ available_space_gb }}GB"
+
         - name: Extend partition to use all space
-          shell: "parted {{ disk_device }} ---pretend-input-tty resizepart {{ last_partition_num.stdout }} Yes 100%"
-          
+          shell: "parted {{ disk_device }} resizepart {{ partition_number }} 100%"
+          register: parted_result
+
         - name: Inform kernel of partition table changes
           shell: "partprobe {{ disk_device }}"
           
-        - name: Wait a moment for changes to settle
+        - name: Wait for changes to settle
           pause:
-            seconds: 2
+            seconds: 3
             
-      when: free_space_count.stdout | int > 0
+        - name: Extend LVM physical volume
+          shell: "pvresize {{ partition_device }}"
+          register: pv_resize_result
 
-    - name: Extend LVM physical volume
-      shell: "pvresize {{ partition_device }}"
-      when: free_space_count.stdout | int > 0
+        - name: Show PV resize result
+          debug:
+            var: pv_resize_result.stdout_lines
 
-    - name: Extend logical volume (root)
+      when: needs_extension
+
+    - name: Check volume group free space
+      shell: "vgs --noheadings -o vg_free vg_root --units g | tr -d ' '"
+      register: vg_free
+      changed_when: false
+
+    - name: Display VG free space
+      debug:
+        msg: "Volume group free space: {{ vg_free.stdout }}"
+
+    - name: Extend logical volume if space available
       shell: "lvextend -l +100%FREE /dev/vg_root/lv_root"
       register: lv_extend
+      when: vg_free.stdout | regex_replace('g|G', '') | float > 0.1
       failed_when: 
         - lv_extend.rc != 0
         - "'matches existing size' not in lv_extend.stderr"
 
+    - name: Show LV extend result
+      debug:
+        var: lv_extend.stdout_lines
+      when: lv_extend is defined and lv_extend is changed
+
     - name: Detect filesystem type
-      shell: "mount | grep ' / ' | awk '{print $5}'"
+      shell: "findmnt -n -o FSTYPE /"
       register: fs_type
       changed_when: false
 
     - name: Extend XFS filesystem
       shell: "xfs_growfs /"
+      register: xfs_result
       when: 
         - fs_type.stdout == "xfs"
-        - lv_extend is changed
+        - lv_extend is defined and lv_extend is changed
 
     - name: Extend EXT filesystem
       shell: "resize2fs /dev/vg_root/lv_root"
+      register: ext_result
       when: 
         - fs_type.stdout in ["ext2", "ext3", "ext4"]
-        - lv_extend is changed
+        - lv_extend is defined and lv_extend is changed
 
-    - name: Show final disk usage
+    - name: Show filesystem extend result
+      debug:
+        var: "{{ xfs_result.stdout_lines if fs_type.stdout == 'xfs' else ext_result.stdout_lines }}"
+      when: (xfs_result is defined and xfs_result is changed) or (ext_result is defined and ext_result is changed)
+
+    - name: Get final disk usage
       shell: df -h /
       register: final_usage
       changed_when: false
 
-    - name: Display final usage
+    - name: Display final results
+      debug:
+        msg:
+          - "=== DISK EXTENSION SUMMARY ==="
+          - "Filesystem type: {{ fs_type.stdout }}"
+          - "Space was available: {{ needs_extension }}"
+          - "Partition extended: {{ 'Yes' if needs_extension else 'No space available' }}"
+          - "LV extended: {{ 'Yes' if lv_extend is defined and lv_extend is changed else 'No extension needed' }}"
+          - "Filesystem extended: {{ 'Yes' if (xfs_result is defined and xfs_result is changed) or (ext_result is defined and ext_result is changed) else 'No extension needed' }}"
+          - ""
+          - "FINAL DISK USAGE:"
+
+    - name: Show final disk usage
       debug:
         var: final_usage.stdout_lines
-
-    - name: Show summary
-      debug:
-        msg: |
-          Extension completed!
-          - Filesystem type: {{ fs_type.stdout }}
-          - Had free space to extend: {{ 'Yes' if free_space_count.stdout | int > 0 else 'No' }}
-          - LV extended: {{ 'Yes' if lv_extend is changed else 'No space to extend' }}
