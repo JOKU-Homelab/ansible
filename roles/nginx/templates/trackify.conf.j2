@@ -3,7 +3,7 @@
 server {
     listen 80;
     listen [::]:80;
-    server_name {{ ansible_fqdn }} {{ ansible_hostname }} _;
+    server_name trackify{{ '-dev' if inventory_hostname.startswith('dev') }}.jokulab.ch _;
 
     root {{ trackify_web_root }};
     index index.html;
