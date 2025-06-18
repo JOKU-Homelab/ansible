@@ -67,7 +67,7 @@
     setype: "{{ item.setype }}"
     state: present
   loop:
-    - { path: "{{ nginx_web_root }}(/.*)?", setype: "httpd_exec_t" }
+    - { path: "/var/www(/.*)?", setype: "httpd_exec_t" }
     - { path: "{{ trackify_web_root }}(/.*)?", setype: "httpd_exec_t" }
   when: 
     - ansible_selinux.status == "enabled"
@@ -85,7 +85,7 @@
     recurse: yes
     state: directory
   loop:
-    - "{{ nginx_web_root | default('/var/www') }}"
+    - "/var/www"
     - "{{ trackify_web_root }}"
   tags: nginx_config
 
@@ -96,7 +96,7 @@
     state: directory
     recurse: yes
   loop:
-    - "{{ nginx_web_root | default('/var/www') }}"
+    - "/var/www"
     - "{{ trackify_web_root }}"
   tags: nginx_config
 
@@ -104,7 +104,7 @@
   shell: |
     find {{ item }} -type f -exec chmod 644 {} \;
   loop:
-    - "{{ nginx_web_root | default('/var/www') }}"
+    - "/var/www"
     - "{{ trackify_web_root }}"
   changed_when: false
   tags: nginx_config
