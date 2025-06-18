@@ -45,7 +45,7 @@
     mode: '0644'
   tags: nginx_config
 
-- name: Configure SELinux for nginx (if enabled)
+- name: Configure SELinux booleans for nginx (if enabled)
   seboolean:
     name: "{{ item }}"
     state: yes
@@ -53,9 +53,60 @@
   loop:
     - httpd_can_network_connect
     - httpd_can_network_relay
+    - httpd_read_user_content
   when: 
     - ansible_selinux.status == "enabled"
-    - nginx_selinux_enabled
+    - nginx_selinux_enabled | default(true)
+  tags: 
+    - nginx_config
+    - selinux
+
+- name: Set SELinux file context for web content directories
+  sefcontext:
+    target: "{{ item.path }}"
+    setype: "{{ item.setype }}"
+    state: present
+  loop:
+    - { path: "{{ nginx_web_root }}(/.*)?", setype: "httpd_exec_t" }
+    - { path: "/var/www/trackify(/.*)?", setype: "httpd_exec_t" }
+  when: 
+    - ansible_selinux.status == "enabled"
+    - nginx_selinux_enabled | default(true)
+  notify: restore selinux contexts
+  tags: 
+    - nginx_config
+    - selinux
+
+- name: Ensure web content has correct ownership
+  file:
+    path: "{{ item }}"
+    owner: "{{ nginx_user | default('nginx') }}"
+    group: "{{ nginx_group | default('nginx') }}"
+    recurse: yes
+    state: directory
+  loop:
+    - "{{ nginx_web_root | default('/var/www') }}"
+    - "/var/www/trackify"
+  tags: nginx_config
+
+- name: Set correct permissions for web directories
+  file:
+    path: "{{ item }}"
+    mode: '0755'
+    state: directory
+    recurse: yes
+  loop:
+    - "{{ nginx_web_root | default('/var/www') }}"
+    - "/var/www/trackify"
+  tags: nginx_config
+
+- name: Set correct permissions for web files
+  shell: |
+    find {{ item }} -type f -exec chmod 644 {} \;
+  loop:
+    - "{{ nginx_web_root | default('/var/www') }}"
+    - "/var/www/trackify"
+  changed_when: false
   tags: nginx_config
 
 - name: Validate nginx configuration
@@ -64,3 +115,20 @@
   changed_when: false
   failed_when: nginx_syntax_check.rc != 0
   tags: nginx_config
+
+# Handler definitions (add these to your handlers/main.yml)
+---
+- name: restart nginx
+  systemd:
+    name: nginx
+    state: restarted
+    daemon_reload: yes
+  listen: "restart nginx"
+
+- name: restore selinux contexts
+  command: restorecon -R {{ item }}
+  loop:
+    - "{{ nginx_web_root | default('/var/www') }}"
+    - "/var/www/trackify"
+  when: ansible_selinux.status == "enabled"
+  listen: "restore selinux contexts"
