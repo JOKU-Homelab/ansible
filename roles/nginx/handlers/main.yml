@@ -18,3 +18,11 @@
     name: firewalld
     state: reloaded
   listen: "reload firewalld"
+
+- name: restore selinux contexts
+  command: restorecon -R {{ item }}
+  loop:
+    - "{{ nginx_web_root | default('/var/www') }}"
+    - "{{ trackify_web_root }}"
+  when: ansible_selinux.status == "enabled"
+  listen: "restore selinux contexts"

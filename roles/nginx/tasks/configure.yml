@@ -68,7 +68,7 @@
     state: present
   loop:
     - { path: "{{ nginx_web_root }}(/.*)?", setype: "httpd_exec_t" }
-    - { path: "/var/www/trackify(/.*)?", setype: "httpd_exec_t" }
+    - { path: "{{ trackify_web_root }}(/.*)?", setype: "httpd_exec_t" }
   when: 
     - ansible_selinux.status == "enabled"
     - nginx_selinux_enabled | default(true)
@@ -86,7 +86,7 @@
     state: directory
   loop:
     - "{{ nginx_web_root | default('/var/www') }}"
-    - "/var/www/trackify"
+    - "{{ trackify_web_root }}"
   tags: nginx_config
 
 - name: Set correct permissions for web directories
@@ -97,7 +97,7 @@
     recurse: yes
   loop:
     - "{{ nginx_web_root | default('/var/www') }}"
-    - "/var/www/trackify"
+    - "{{ trackify_web_root }}"
   tags: nginx_config
 
 - name: Set correct permissions for web files
@@ -105,7 +105,7 @@
     find {{ item }} -type f -exec chmod 644 {} \;
   loop:
     - "{{ nginx_web_root | default('/var/www') }}"
-    - "/var/www/trackify"
+    - "{{ trackify_web_root }}"
   changed_when: false
   tags: nginx_config
 
@@ -115,20 +115,3 @@
   changed_when: false
   failed_when: nginx_syntax_check.rc != 0
   tags: nginx_config
-
-# Handler definitions (add these to your handlers/main.yml)
----
-- name: restart nginx
-  systemd:
-    name: nginx
-    state: restarted
-    daemon_reload: yes
-  listen: "restart nginx"
-
-- name: restore selinux contexts
-  command: restorecon -R {{ item }}
-  loop:
-    - "{{ nginx_web_root | default('/var/www') }}"
-    - "/var/www/trackify"
-  when: ansible_selinux.status == "enabled"
-  listen: "restore selinux contexts"
