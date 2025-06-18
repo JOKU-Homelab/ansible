@@ -63,7 +63,7 @@
 
 - name: Copy built application to web root
   copy:
-    src: "{{ trackify_source_dir }}/{{ trackify_build_dir }}/"
+    src: "{{ trackify_source_dir }}/{{ trackify_build_dir }}/client/"
     dest: "{{ trackify_web_root }}/"
     owner: "{{ nginx_user }}"
     group: "{{ nginx_group }}"
