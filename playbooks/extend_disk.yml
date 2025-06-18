@@ -1,196 +1,150 @@
 ---
-- name: Robust disk extension for LVM setup
-  hosts: "{{ hostname}}"
+- name: Extend disk to use full available space
+  hosts: "{{ hostname }}"
   become: true
   gather_facts: true
-
+  
+  vars:
+    # Default settings - can be overridden
+    target_vg: "vg_root"
+    target_lv: "lv_root"
+    target_filesystem: "/"
+    
   tasks:
-    - name: Show current disk usage
-      shell: df -h /
-      register: current_usage
-      changed_when: false
-
-    - name: Display current usage
+    - name: Display current disk usage
       debug:
-        var: current_usage.stdout_lines
+        msg: "Current disk usage for {{ target_filesystem }}: {{ ansible_mounts | selectattr('mount', 'equalto', target_filesystem) | map(attribute='size_total') | first | int // 1024 // 1024 // 1024 }}GB used of {{ ansible_mounts | selectattr('mount', 'equalto', target_filesystem) | map(attribute='size_total') | first | int // 1024 // 1024 // 1024 }}GB total"
 
-    - name: Get root filesystem device
-      shell: df / | tail -1 | awk '{print $1}'
-      register: root_device
+    - name: Get disk information
+      shell: lsblk -b -o NAME,SIZE,TYPE | grep "disk$" | head -1
+      register: disk_info
       changed_when: false
 
-    - name: Get LVM physical volume information
-      shell: "pvs --noheadings -o pv_name,vg_name,pv_size,pv_free --separator='|'"
+    - name: Extract disk name and size
+      set_fact:
+        disk_name: "{{ disk_info.stdout.split()[0] }}"
+        disk_size_bytes: "{{ disk_info.stdout.split()[1] }}"
+        disk_size_gb: "{{ (disk_info.stdout.split()[1] | int / 1024 / 1024 / 1024) | round(1) }}"
+
+    - name: Display disk information
+      debug:
+        msg: "Found disk {{ disk_name }} with size {{ disk_size_gb }}GB"
+
+    - name: Get current partition table
+      shell: "parted /dev/{{ disk_name }} print free"
+      register: partition_info
+      changed_when: false
+
+    - name: Display current partitions
+      debug:
+        var: partition_info.stdout_lines
+
+    - name: Check if there's unallocated space
+      shell: "parted /dev/{{ disk_name }} print free | grep -E 'Free Space|Unallocated' | tail -1"
+      register: free_space_check
+      changed_when: false
+      failed_when: false
+
+    - name: Get the last partition number
+      shell: "parted /dev/{{ disk_name }} print | grep -E '^[[:space:]]*[0-9]+' | tail -1 | awk '{print $1}'"
+      register: last_partition
+      changed_when: false
+
+    - name: Display free space information
+      debug:
+        msg: "Free space check result: {{ free_space_check.stdout if free_space_check.stdout else 'No unallocated space found' }}"
+
+    - name: Check current LVM setup
+      shell: "pvs --noheadings -o pv_name,vg_name,pv_size,pv_free"
       register: pv_info
       changed_when: false
 
-    - name: Display PV information
+    - name: Display current LVM physical volumes
       debug:
-        msg: "Physical Volumes: {{ pv_info.stdout_lines }}"
+        var: pv_info.stdout_lines
 
-    - name: Extract physical volume device
-      set_fact:
-        pv_device: "{{ pv_info.stdout_lines[0].split('|')[0].strip() }}"
-
-    - name: Get disk and partition information
-      shell: "lsblk -no NAME,TYPE,SIZE {{ pv_device }}"
-      register: lsblk_info
+    - name: Check if partition needs extending
+      shell: "parted /dev/{{ disk_name }} print free | grep -c 'Free Space' || echo '0'"
+      register: has_free_space
       changed_when: false
 
-    - name: Find parent disk
-      shell: "lsblk -no PKNAME {{ pv_device }} | head -1"
-      register: parent_disk
-      changed_when: false
-
-    - name: Set disk and partition facts
-      set_fact:
-        partition_device: "{{ pv_device }}"
-        disk_device: "/dev/{{ parent_disk.stdout }}"
-        partition_number: "{{ pv_device | regex_search('[0-9]+$') }}"
-
-    - name: Show detected devices
-      debug:
-        msg: 
-          - "Root LV: {{ root_device.stdout }}"
-          - "Physical Volume: {{ partition_device }}"
-          - "Parent Disk: {{ disk_device }}"
-          - "Partition Number: {{ partition_number }}"
-
-    - name: Get actual disk size using blockdev
-      shell: "blockdev --getsize64 {{ disk_device }}"
-      register: actual_disk_size_bytes
-      changed_when: false
-
-    - name: Get current partition end using parted
-      shell: "parted {{ disk_device }} print | grep '^ *{{ partition_number }}' | awk '{print $3}'"
-      register: partition_end
-      changed_when: false
-
-    - name: Get disk size using parted
-      shell: "parted {{ disk_device }} print | grep '^Disk {{ disk_device }}:' | awk '{print $3}'"
-      register: parted_disk_size
-      changed_when: false
-
-    - name: Check for free space using parted
-      shell: "parted {{ disk_device }} print free | grep 'Free Space' | tail -1 | awk '{print $3}' || echo '0GB'"
-      register: free_space_parted
-      changed_when: false
-
-    - name: Calculate space information
-      set_fact:
-        actual_disk_size_gb: "{{ (actual_disk_size_bytes.stdout | int / 1024 / 1024 / 1024) | round(2) }}"
-        parted_disk_size_clean: "{{ parted_disk_size.stdout | regex_replace('GB|MB|KB|TB', '') | float }}"
-        partition_end_clean: "{{ partition_end.stdout | regex_replace('GB|MB|KB|TB', '') | float }}"
-        free_space_available: "{{ free_space_parted.stdout != '0GB' and free_space_parted.stdout != '' }}"
-
-    - name: Display space information
-      debug:
-        msg:
-          - "Actual disk size (blockdev): {{ actual_disk_size_gb }}GB"
-          - "Disk size per parted: {{ parted_disk_size.stdout }}"
-          - "Partition ends at: {{ partition_end.stdout }}"
-          - "Free space detected: {{ 'Yes' if free_space_available else 'No' }}"
-          - "Free space info: {{ free_space_parted.stdout }}"
-
-    - name: Check if extension is needed
-      set_fact:
-        needs_extension: "{{ free_space_available or (actual_disk_size_gb | float - parted_disk_size_clean | float) > 0.1 }}"
-
-    - name: Skip if no space to extend
-      debug:
-        msg: "No space available to extend. Disk size: {{ actual_disk_size_gb }}GB, Parted sees: {{ parted_disk_size.stdout }}"
-      when: not needs_extension
-
-    - name: Extend disk when space is available
+    - name: Extend partition if free space exists
       block:
-        - name: Show what will be extended
-          debug:
-            msg: "Will extend {{ partition_device }} on {{ disk_device }}. Actual disk: {{ actual_disk_size_gb }}GB"
-
-        - name: Extend partition to use all space
-          shell: "parted {{ disk_device }} resizepart {{ partition_number }} 100%"
-          register: parted_result
-
-        - name: Inform kernel of partition table changes
-          shell: "partprobe {{ disk_device }}"
+        - name: Extend the last partition to use all available space
+          shell: "parted /dev/{{ disk_name }} resizepart {{ last_partition.stdout }} 100%"
+          register: partition_extend_result
           
-        - name: Wait for changes to settle
-          pause:
-            seconds: 3
+        - name: Inform kernel about partition changes
+          shell: "partprobe /dev/{{ disk_name }}"
+          
+        - name: Wait for device to be ready
+          wait_for:
+            timeout: 5
             
-        - name: Extend LVM physical volume
-          shell: "pvresize {{ partition_device }}"
-          register: pv_resize_result
+      when: has_free_space.stdout | int > 0
 
-        - name: Show PV resize result
-          debug:
-            var: pv_resize_result.stdout_lines
+    - name: Extend LVM physical volume
+      shell: "pvresize /dev/{{ disk_name }}{{ last_partition.stdout }}"
+      register: pv_extend_result
+      when: has_free_space.stdout | int > 0
 
-      when: needs_extension
-
-    - name: Check volume group free space
-      shell: "vgs --noheadings -o vg_free vg_root --units g | tr -d ' '"
-      register: vg_free
+    - name: Check available space in volume group
+      shell: "vgs --noheadings -o vg_free {{ target_vg }} --units g | tr -d ' '"
+      register: vg_free_space
       changed_when: false
 
-    - name: Display VG free space
+    - name: Display volume group free space
       debug:
-        msg: "Volume group free space: {{ vg_free.stdout }}"
+        msg: "Available space in {{ target_vg }}: {{ vg_free_space.stdout }}"
 
-    - name: Extend logical volume if space available
-      shell: "lvextend -l +100%FREE /dev/vg_root/lv_root"
-      register: lv_extend
-      when: vg_free.stdout | regex_replace('g|G', '') | float > 0.1
+    - name: Extend logical volume to use all available space
+      shell: "lvextend -l +100%FREE /dev/{{ target_vg }}/{{ target_lv }}"
+      register: lv_extend_result
+      when: 
+        - vg_free_space.stdout | regex_replace('g|G', '') | float > 0.1
       failed_when: 
-        - lv_extend.rc != 0
-        - "'matches existing size' not in lv_extend.stderr"
-
-    - name: Show LV extend result
-      debug:
-        var: lv_extend.stdout_lines
-      when: lv_extend is defined and lv_extend is changed
+        - lv_extend_result.rc != 0
+        - "'matches existing size' not in lv_extend_result.stderr"
 
     - name: Detect filesystem type
-      shell: "findmnt -n -o FSTYPE /"
+      shell: "df -T {{ target_filesystem }} | tail -1 | awk '{print $2}'"
       register: fs_type
       changed_when: false
 
     - name: Extend XFS filesystem
-      shell: "xfs_growfs /"
-      register: xfs_result
+      shell: "xfs_growfs {{ target_filesystem }}"
+      register: xfs_extend_result
       when: 
         - fs_type.stdout == "xfs"
-        - lv_extend is defined and lv_extend is changed
+        - lv_extend_result is changed
 
-    - name: Extend EXT filesystem
-      shell: "resize2fs /dev/vg_root/lv_root"
-      register: ext_result
+    - name: Extend EXT4 filesystem
+      shell: "resize2fs /dev/{{ target_vg }}/{{ target_lv }}"
+      register: ext4_extend_result
       when: 
-        - fs_type.stdout in ["ext2", "ext3", "ext4"]
-        - lv_extend is defined and lv_extend is changed
-
-    - name: Show filesystem extend result
-      debug:
-        var: "{{ xfs_result.stdout_lines if fs_type.stdout == 'xfs' else ext_result.stdout_lines }}"
-      when: (xfs_result is defined and xfs_result is changed) or (ext_result is defined and ext_result is changed)
+        - fs_type.stdout in ["ext4", "ext3", "ext2"]
+        - lv_extend_result is changed
 
     - name: Get final disk usage
-      shell: df -h /
-      register: final_usage
-      changed_when: false
+      setup:
+        filter: ansible_mounts
 
-    - name: Display final results
+    - name: Display final disk usage
       debug:
-        msg:
-          - "=== DISK EXTENSION SUMMARY ==="
-          - "Filesystem type: {{ fs_type.stdout }}"
-          - "Space was available: {{ needs_extension }}"
-          - "Partition extended: {{ 'Yes' if needs_extension else 'No space available' }}"
-          - "LV extended: {{ 'Yes' if lv_extend is defined and lv_extend is changed else 'No extension needed' }}"
-          - "Filesystem extended: {{ 'Yes' if (xfs_result is defined and xfs_result is changed) or (ext_result is defined and ext_result is changed) else 'No extension needed' }}"
-          - ""
-          - "FINAL DISK USAGE:"
+        msg: "Final disk usage for {{ target_filesystem }}: {{ (ansible_mounts | selectattr('mount', 'equalto', target_filesystem) | map(attribute='size_available') | first | int + ansible_mounts | selectattr('mount', 'equalto', target_filesystem) | map(attribute='size_total') | first | int - ansible_mounts | selectattr('mount', 'equalto', target_filesystem) | map(attribute='size_available') | first | int) // 1024 // 1024 // 1024 }}GB total, {{ ansible_mounts | selectattr('mount', 'equalto', target_filesystem) | map(attribute='size_available') | first | int // 1024 // 1024 // 1024 }}GB available"
 
-    - name: Show final disk usage
+    - name: Summary of changes
       debug:
-        var: final_usage.stdout_lines
+        msg: |
+          Disk extension completed:
+          - Disk: {{ disk_name }} ({{ disk_size_gb }}GB)
+          - Partition extended: {{ 'Yes' if has_free_space.stdout | int > 0 else 'No free space to extend' }}
+          - LVM PV extended: {{ 'Yes' if pv_extend_result is defined and pv_extend_result is changed else 'No extension needed' }}
+          - LVM LV extended: {{ 'Yes' if lv_extend_result is defined and lv_extend_result is changed else 'No extension needed' }}
+          - Filesystem extended: {{ 'Yes' if (xfs_extend_result is defined and xfs_extend_result is changed) or (ext4_extend_result is defined and ext4_extend_result is changed) else 'No extension needed' }}
+          - Filesystem type: {{ fs_type.stdout }}
+
+  handlers:
+    - name: Update facts
+      setup:
+        filter: ansible_mounts
