@@ -1,0 +1,31 @@
+[Unit]
+Description=Traefik Edge Router
+Documentation=https://doc.traefik.io/traefik/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ traefik_user }}
+Group={{ traefik_group }}
+{% if traefik_dns_provider == "cloudflare" %}
+EnvironmentFile={{ traefik_config_dir }}/cloudflare/cloudflare.env
+{% endif %}
+ExecStart={{ traefik_binary_path }} --configfile={{ traefik_config_dir }}/traefik.yml
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=traefik
+KillMode=mixed
+KillSignal=SIGTERM
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths={{ traefik_data_dir }} {{ traefik_log_dir }}
+
+[Install]
+WantedBy=multi-user.target

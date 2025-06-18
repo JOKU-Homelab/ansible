@@ -1,0 +1,41 @@
+
+---
+- name: Create Cloudflare configuration directory
+  file:
+    path: "{{ traefik_config_dir }}/cloudflare"
+    state: directory
+    owner: "{{ traefik_user }}"
+    group: "{{ traefik_group }}"
+    mode: '0750'
+  when: traefik_dns_provider == "cloudflare"
+  tags: traefik_cloudflare
+
+- name: Create Cloudflare environment file
+  template:
+    src: cloudflare.env.j2
+    dest: "{{ traefik_config_dir }}/cloudflare/cloudflare.env"
+    owner: "{{ traefik_user }}"
+    group: "{{ traefik_group }}"
+    mode: '0600'
+  when: traefik_dns_provider == "cloudflare"
+  notify: restart traefik
+  tags: traefik_cloudflare
+
+- name: Validate Cloudflare credentials
+  block:
+    - name: Check if API token is provided
+      fail:
+        msg: "Either traefik_cloudflare_api_token or both traefik_cloudflare_email and traefik_cloudflare_api_key must be provided"
+      when:
+        - traefik_cloudflare_api_token == ""
+        - (traefik_cloudflare_email == "" or traefik_cloudflare_api_key == "")
+
+    - name: Warn about deprecated API key usage
+      debug:
+        msg: "WARNING: Using legacy API key authentication. Consider migrating to API tokens for better security."
+      when:
+        - traefik_cloudflare_api_token == ""
+        - traefik_cloudflare_email != ""
+        - traefik_cloudflare_api_key != ""
+  when: traefik_dns_provider == "cloudflare"
+  tags: traefik_cloudflare

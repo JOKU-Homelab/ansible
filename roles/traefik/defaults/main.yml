@@ -1,0 +1,120 @@
+---
+# Basic Traefik configuration
+traefik_version: "3.0.4"
+traefik_user: traefik
+traefik_group: traefik
+traefik_home_dir: /var/lib/traefik
+
+# Directories
+traefik_config_dir: /etc/traefik
+traefik_data_dir: /var/lib/traefik
+traefik_log_dir: /var/log/traefik
+traefik_ssl_dir: /etc/traefik/ssl
+traefik_dynamic_config_dir: /etc/traefik/dynamic
+traefik_binary_path: /usr/local/bin/traefik
+
+# Domain configuration
+traefik_domain: "jokulab.ch"
+traefik_trackify_subdomain: "trackify"
+traefik_trackify_dev_subdomain: "trackify-dev"
+
+# Network configuration
+traefik_entrypoints:
+  web:
+    address: ":80"
+    redirect_to_https: true
+  websecure:
+    address: ":443"
+
+# Dashboard configuration
+traefik_dashboard_enabled: true
+traefik_dashboard_port: 8080
+traefik_dashboard_auth_enabled: true
+traefik_dashboard_user: admin
+traefik_dashboard_password: "{{ vault_traefik_dashboard_password | default('changeme') }}"
+traefik_dashboard_domain: "traefik.{{ traefik_domain }}"
+
+# SSL/TLS configuration
+traefik_ssl_enabled: true
+traefik_letsencrypt_enabled: true
+traefik_letsencrypt_staging: false  # Set to true for testing
+traefik_letsencrypt_email: "admin@{{ traefik_domain }}"
+traefik_generate_selfsigned_cert: false  # Disabled when using DNS challenge
+
+# DNS Challenge configuration (NEW)
+traefik_dns_challenge_enabled: true
+traefik_dns_provider: "cloudflare"  # DNS provider to use
+traefik_dns_resolvers:
+  - "1.1.1.1:53"
+  - "8.8.8.8:53"
+
+# Cloudflare specific settings (NEW)
+traefik_cloudflare_api_token: "{{ vault_cloudflare_api_token | default('') }}"
+traefik_cloudflare_zone_api_token: "{{ vault_cloudflare_zone_api_token | default('') }}"
+traefik_cloudflare_dns_api_token: "{{ vault_cloudflare_dns_api_token | default('') }}"
+
+# Legacy Cloudflare settings (fallback)
+traefik_cloudflare_email: "{{ vault_cloudflare_email | default('') }}"
+traefik_cloudflare_api_key: "{{ vault_cloudflare_api_key | default('') }}"
+
+# Challenge preference: dns or http (NEW)
+traefik_challenge_method: "dns"  # Options: dns, http
+
+# Service discovery and routing
+traefik_backend_services:
+  # Frontend service (NGINX)
+  trackify-frontend:
+    domain: "{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
+    backend_url: "http://{{ groups['frontend'][0] if groups['frontend'] is defined and groups['frontend']|length > 0 else 'prdweb01' }}:80"
+    health_check: "/health"
+    
+  trackify-frontend-dev:
+    domain: "{{ traefik_trackify_dev_subdomain }}.{{ traefik_domain }}"
+    backend_url: "http://{{ groups['frontend_dev'][0] if groups['frontend_dev'] is defined and groups['frontend_dev']|length > 0 else 'devweb01' }}:80"
+    health_check: "/health"
+    
+  # API service (Spring Boot)
+  trackify-api:
+    domain: "{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
+    backend_url: "http://{{ groups['backend'][0] if groups['backend'] is defined and groups['backend']|length > 0 else 'prdapp01' }}:8080"
+    path_prefix: "/api"
+    health_check: "/api/health"
+    strip_prefix: false
+    
+  trackify-api-dev:
+    domain: "{{ traefik_trackify_dev_subdomain }}.{{ traefik_domain }}"
+    backend_url: "http://{{ groups['backend_dev'][0] if groups['backend_dev'] is defined and groups['backend_dev']|length > 0 else 'devapp01' }}:8080"
+    path_prefix: "/api"
+    health_check: "/api/health"
+    strip_prefix: false
+
+# Logging configuration
+traefik_log_level: INFO
+traefik_access_log_enabled: true
+traefik_access_log_file: "{{ traefik_log_dir }}/access.log"
+traefik_log_file: "{{ traefik_log_dir }}/traefik.log"
+
+# Security configuration
+traefik_security_headers:
+  frameDeny: true
+  contentTypeNosniff: true
+  browserXssFilter: true
+  referrerPolicy: "strict-origin-when-cross-origin"
+  forceSTSHeader: true
+  stsIncludeSubdomains: true
+  stsPreload: true
+  stsSeconds: 31536000
+
+# Rate limiting
+traefik_rate_limit_enabled: true
+traefik_rate_limit_burst: 100
+traefik_rate_limit_average: 50
+
+# Monitoring
+traefik_metrics_enabled: true
+traefik_metrics_prometheus_enabled: true
+
+# Firewall configuration
+traefik_configure_firewall: true
+traefik_firewall_zone: dmz
+traefik_selinux_enabled: true

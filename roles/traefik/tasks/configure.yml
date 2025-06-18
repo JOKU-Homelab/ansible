@@ -1,0 +1,63 @@
+
+---
+- name: Generate main Traefik configuration
+  template:
+    src: traefik.yml.j2
+    dest: "{{ traefik_config_dir }}/traefik.yml"
+    owner: "{{ traefik_user }}"
+    group: "{{ traefik_group }}"
+    mode: '0644'
+    backup: yes
+  notify: restart traefik
+  tags: traefik_config
+
+- name: Generate dynamic configuration for services
+  template:
+    src: dynamic.yml.j2
+    dest: "{{ traefik_dynamic_config_dir }}/dynamic.yml"
+    owner: "{{ traefik_user }}"
+    group: "{{ traefik_group }}"
+    mode: '0644'
+  notify: restart traefik
+  tags: traefik_config
+
+- name: Create Traefik dashboard auth file
+  htpasswd:
+    path: "{{ traefik_config_dir }}/.htpasswd"
+    name: "{{ traefik_dashboard_user }}"
+    password: "{{ traefik_dashboard_password }}"
+    owner: "{{ traefik_user }}"
+    group: "{{ traefik_group }}"
+    mode: '0640'
+  when: traefik_dashboard_auth_enabled
+  tags: traefik_config
+
+- name: Configure logrotate for Traefik
+  template:
+    src: traefik.logrotate.j2
+    dest: /etc/logrotate.d/traefik
+    owner: root
+    group: root
+    mode: '0644'
+  tags: traefik_config
+
+- name: Configure SELinux for Traefik (if enabled)
+  seboolean:
+    name: "{{ item }}"
+    state: yes
+    persistent: yes
+  loop:
+    - httpd_can_network_connect
+    - httpd_can_network_relay
+  when: 
+    - ansible_selinux.status == "enabled"
+    - traefik_selinux_enabled
+  tags: traefik_config
+
+- name: Start and enable Traefik service
+  systemd:
+    name: traefik
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  tags: traefik_config

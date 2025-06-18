@@ -1,0 +1,24 @@
+
+---
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+  listen: "reload systemd"
+
+- name: restart traefik
+  systemd:
+    name: traefik
+    state: restarted
+  listen: "restart traefik"
+
+- name: reload traefik
+  systemd:
+    name: traefik
+    state: reloaded
+  listen: "reload traefik"
+
+- name: reload firewalld
+  systemd:
+    name: firewalld
+    state: reloaded
+  listen: "reload firewalld"

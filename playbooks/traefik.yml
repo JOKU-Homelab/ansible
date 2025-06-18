@@ -1,0 +1,8 @@
+---
+- name: Deploy Traefik Reverse Proxy with Cloudflare DNS Challenge
+  hosts: "{{ hostname }}"
+  become: true
+  gather_facts: true
+  roles:
+    - role: traefik
+      tags: traefik

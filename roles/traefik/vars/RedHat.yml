@@ -1,0 +1,4 @@
+
+---
+traefik_packages:
+  - python3-passlib  # For htpasswd module

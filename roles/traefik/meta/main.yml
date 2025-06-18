@@ -1,0 +1,22 @@
+
+---
+galaxy_info:
+  author: Trackify Team
+  description: Traefik reverse proxy and load balancer for Trackify infrastructure
+  company: Trackit ltd.
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+  galaxy_tags:
+    - traefik
+    - reverse-proxy
+    - load-balancer
+    - ssl
+    - letsencrypt
+    - trackify
+
+dependencies: []

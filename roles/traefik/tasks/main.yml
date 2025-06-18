@@ -1,0 +1,28 @@
+---
+- name: Include OS-specific variables
+  include_vars: "{{ ansible_os_family }}.yml"
+  tags: traefik
+
+- name: Include installation tasks
+  include_tasks: install.yml
+  tags: traefik
+
+- name: Include configuration tasks
+  include_tasks: configure.yml
+  tags: traefik
+
+- name: Include SSL setup tasks
+  include_tasks: ssl.yml
+  tags: traefik
+
+- name: Include Cloudflare DNS setup tasks
+  include_tasks: cloudflare.yml
+  when: 
+    - traefik_dns_challenge_enabled
+    - traefik_dns_provider == "cloudflare"
+  tags: traefik
+
+- name: Include firewall configuration tasks
+  include_tasks: firewall.yml
+  tags: traefik
+  when: traefik_configure_firewall

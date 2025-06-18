@@ -1,0 +1,78 @@
+
+---
+- name: Create traefik user and group
+  group:
+    name: "{{ traefik_group }}"
+    state: present
+  tags: traefik_install
+
+- name: Create traefik user
+  user:
+    name: "{{ traefik_user }}"
+    group: "{{ traefik_group }}"
+    system: yes
+    shell: /sbin/nologin
+    home: "{{ traefik_home_dir }}"
+    createhome: yes
+  tags: traefik_install
+
+- name: Create traefik directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ traefik_user }}"
+    group: "{{ traefik_group }}"
+    mode: '0755'
+  loop:
+    - "{{ traefik_config_dir }}"
+    - "{{ traefik_data_dir }}"
+    - "{{ traefik_log_dir }}"
+    - "{{ traefik_ssl_dir }}"
+    - "{{ traefik_dynamic_config_dir }}"
+  tags: traefik_install
+
+- name: Download Traefik binary
+  get_url:
+    url: "{{ traefik_download_url }}"
+    dest: /tmp/traefik_{{ traefik_version }}_linux_amd64.tar.gz
+    mode: '0644'
+  tags: traefik_install
+
+- name: Extract Traefik binary
+  unarchive:
+    src: /tmp/traefik_{{ traefik_version }}_linux_amd64.tar.gz
+    dest: /tmp
+    remote_src: yes
+    creates: /tmp/traefik
+  tags: traefik_install
+
+- name: Install Traefik binary
+  copy:
+    src: /tmp/traefik
+    dest: "{{ traefik_binary_path }}"
+    mode: '0755'
+    owner: root
+    group: root
+    remote_src: yes
+  tags: traefik_install
+
+- name: Create Traefik systemd service
+  template:
+    src: traefik.service.j2
+    dest: /etc/systemd/system/traefik.service
+    mode: '0644'
+  notify: 
+    - reload systemd
+    - restart traefik
+  tags: traefik_install
+
+- name: Clean up downloaded files
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/traefik_{{ traefik_version }}_linux_amd64.tar.gz
+    - /tmp/traefik
+    - /tmp/CHANGELOG.md
+    - /tmp/LICENSE.md
+  tags: traefik_install

@@ -1,0 +1,32 @@
+
+---
+- name: Configure firewall for HTTP
+  firewalld:
+    port: "80/tcp"
+    permanent: yes
+    state: enabled
+    zone: "{{ traefik_firewall_zone }}"
+    immediate: yes
+  notify: reload firewalld
+  tags: traefik_firewall
+
+- name: Configure firewall for HTTPS
+  firewalld:
+    port: "443/tcp"
+    permanent: yes
+    state: enabled
+    zone: "{{ traefik_firewall_zone }}"
+    immediate: yes
+  notify: reload firewalld
+  tags: traefik_firewall
+
+- name: Configure firewall for Traefik dashboard
+  firewalld:
+    port: "{{ traefik_dashboard_port }}/tcp"
+    permanent: yes
+    state: enabled
+    zone: internal
+    immediate: yes
+  notify: reload firewalld
+  when: traefik_dashboard_enabled
+  tags: traefik_firewall

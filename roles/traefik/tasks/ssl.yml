@@ -1,0 +1,54 @@
+---
+- name: Install python3-cryptography for certificate generation
+  dnf:
+    name: python3-cryptography
+    state: present
+  tags: traefik_ssl
+
+- name: Create ACME data file with proper permissions
+  file:
+    path: "{{ traefik_data_dir }}/acme.json"
+    state: touch
+    owner: "{{ traefik_user }}"
+    group: "{{ traefik_group }}"
+    mode: '0600'
+  tags: traefik_ssl
+
+- name: Generate self-signed certificate for development/fallback
+  block:
+    - name: Create private key
+      openssl_privatekey:
+        path: "{{ traefik_ssl_dir }}/traefik.key"
+        size: 2048
+        owner: "{{ traefik_user }}"
+        group: "{{ traefik_group }}"
+        mode: '0600'
+
+    - name: Create certificate signing request
+      openssl_csr:
+        path: "{{ traefik_ssl_dir }}/traefik.csr"
+        privatekey_path: "{{ traefik_ssl_dir }}/traefik.key"
+        common_name: "{{ traefik_domain }}"
+        subject_alt_name:
+          - "DNS:{{ traefik_domain }}"
+          - "DNS:*.{{ traefik_domain }}"
+          - "DNS:trackify.{{ traefik_domain }}"
+          - "DNS:trackify-dev.{{ traefik_domain }}"
+        owner: "{{ traefik_user }}"
+        group: "{{ traefik_group }}"
+        mode: '0644'
+
+    - name: Create self-signed certificate
+      openssl_certificate:
+        path: "{{ traefik_ssl_dir }}/traefik.crt"
+        privatekey_path: "{{ traefik_ssl_dir }}/traefik.key"
+        csr_path: "{{ traefik_ssl_dir }}/traefik.csr"
+        provider: selfsigned
+        owner: "{{ traefik_user }}"
+        group: "{{ traefik_group }}"
+        mode: '0644'
+        valid_in: "{{ 365 * 24 * 3600 }}"  # 1 year
+  when: 
+    - traefik_generate_selfsigned_cert
+    - not (traefik_letsencrypt_enabled and traefik_dns_challenge_enabled)
+  tags: traefik_ssl
