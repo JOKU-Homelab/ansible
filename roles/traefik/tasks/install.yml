@@ -1,5 +1,13 @@
 
 ---
+- name: Install required packages for Traefik
+  dnf:
+    name:
+      - python3-passlib  # Required for htpasswd module
+      - python3-cryptography  # Required for SSL tasks
+    state: present
+  tags: traefik_install
+
 - name: Create traefik user and group
   group:
     name: "{{ traefik_group }}"

@@ -1,10 +1,4 @@
 ---
-- name: Install python3-cryptography for certificate generation
-  dnf:
-    name: python3-cryptography
-    state: present
-  tags: traefik_ssl
-
 - name: Create ACME data file with proper permissions
   file:
     path: "{{ traefik_data_dir }}/acme.json"
