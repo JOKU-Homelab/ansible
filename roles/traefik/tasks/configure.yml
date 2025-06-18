@@ -53,11 +53,3 @@
     - ansible_selinux.status == "enabled"
     - traefik_selinux_enabled
   tags: traefik_config
-
-- name: Start and enable Traefik service
-  systemd:
-    name: traefik
-    state: started
-    enabled: yes
-    daemon_reload: yes
-  tags: traefik_config

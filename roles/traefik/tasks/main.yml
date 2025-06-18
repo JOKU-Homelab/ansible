@@ -26,3 +26,10 @@
   include_tasks: firewall.yml
   tags: traefik
   when: traefik_configure_firewall
+
+- name: Start and enable Traefik service
+  systemd:
+    name: traefik
+    state: started
+    enabled: yes
+    daemon_reload: yes
