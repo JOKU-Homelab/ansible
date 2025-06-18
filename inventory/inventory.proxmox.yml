@@ -1,5 +1,5 @@
 ---
-plugin: community.general.proxmox
+plugin: community.proxmox.proxmox
 url: "https://prdpve01.jokulab.ch:8006"
 validate_certs: false
 
