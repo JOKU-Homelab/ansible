@@ -41,7 +41,7 @@ nodejs_global_packages:
 trackify_git_repo: "https://github.com/bbzbl-it-joku/Module306-Frontend.git"  # Update with actual repo
 trackify_source_dir: /opt/trackify-frontend
 trackify_web_root: /var/www/trackify
-trackify_build_dir: "build"  # or "dist" depending on your build setup
+trackify_build_dir: "build/client"  # or "dist" depending on your build setup
 
 # Branch selection based on inventory hostname
 trackify_git_branch: "{{ 'dev' if inventory_hostname.startswith('dev') else 'main' }}"
