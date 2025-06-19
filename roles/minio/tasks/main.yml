@@ -94,6 +94,24 @@
     daemon_reload: true
   become: true
 
+- name: Configure firewall for MinIO
+  firewalld:
+    port: "9000/tcp"
+    permanent: yes
+    state: enabled
+    zone: "internal"
+    immediate: yes
+  notify: reload firewalld
+
+- name: Configure firewall for MinIO console
+  firewalld:
+    port: "9001/tcp"
+    permanent: yes
+    state: enabled
+    zone: "internal"
+    immediate: yes
+  notify: reload firewalld
+
 - name: Wait for MinIO to be ready
   uri:
     url: "http://{{ minio_bind_address }}:{{ minio_port }}/minio/health/ready"
