@@ -41,14 +41,14 @@ traefik_letsencrypt_staging: false  # Set to true for testing
 traefik_letsencrypt_email: "admin@{{ traefik_domain }}"
 traefik_generate_selfsigned_cert: false  # Disabled when using DNS challenge
 
-# DNS Challenge configuration (NEW)
+# DNS Challenge configuration
 traefik_dns_challenge_enabled: true
 traefik_dns_provider: "cloudflare"  # DNS provider to use
 traefik_dns_resolvers:
   - "1.1.1.1:53"
   - "8.8.8.8:53"
 
-# Cloudflare specific settings (NEW)
+# Cloudflare specific settings
 traefik_cloudflare_api_token: "{{ vault_cloudflare_api_token | default('') }}"
 traefik_cloudflare_zone_api_token: "{{ vault_cloudflare_zone_api_token | default('') }}"
 traefik_cloudflare_dns_api_token: "{{ vault_cloudflare_dns_api_token | default('') }}"
@@ -57,7 +57,7 @@ traefik_cloudflare_dns_api_token: "{{ vault_cloudflare_dns_api_token | default('
 traefik_cloudflare_email: "{{ vault_cloudflare_email | default('') }}"
 traefik_cloudflare_api_key: "{{ vault_cloudflare_api_key | default('') }}"
 
-# Challenge preference: dns or http (NEW)
+# Challenge preference: dns or http
 traefik_challenge_method: "dns"  # Options: dns, http
 
 # Service discovery and routing
@@ -88,7 +88,54 @@ traefik_backend_services:
     health_check: "/api/health"
     strip_prefix: false
 
-# MinIO Object Storage API (Production) - for direct file access
+  # Keycloak Identity and Access Management (Production)
+  trackify-keycloak:
+    domain: "{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
+    backend_url: "http://prdkc01.jokulab.ch:8080"
+    path_prefix: "/auth"
+    health_check: "/health/ready"
+    strip_prefix: false
+    priority: 100  # Higher priority for auth routes
+    middlewares:
+      - "keycloak-headers"
+      - "keycloak-cors"
+    
+  # Keycloak Identity and Access Management (Development)
+  trackify-keycloak-dev:
+    domain: "{{ traefik_trackify_dev_subdomain }}.{{ traefik_domain }}"
+    backend_url: "http://devkc01.jokulab.ch:8080"
+    path_prefix: "/auth"
+    health_check: "/health/ready"
+    strip_prefix: false
+    priority: 100  # Higher priority for auth routes
+    middlewares:
+      - "keycloak-headers"
+      - "keycloak-cors"
+
+  # Keycloak Admin Console (Production) - Admin path
+  trackify-keycloak-admin:
+    domain: "{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
+    backend_url: "http://prdkc01.jokulab.ch:8080"
+    path_prefix: "/admin"
+    health_check: "/health/ready"
+    strip_prefix: false
+    priority: 90  # Lower priority than /auth but higher than general routes
+    middlewares:
+      - "keycloak-admin-auth"
+      - "keycloak-headers"
+
+  # Keycloak Admin Console (Development) - Admin path
+  trackify-keycloak-admin-dev:
+    domain: "{{ traefik_trackify_dev_subdomain }}.{{ traefik_domain }}"
+    backend_url: "http://devkc01.jokulab.ch:8080"
+    path_prefix: "/admin"
+    health_check: "/health/ready"
+    strip_prefix: false
+    priority: 90  # Lower priority than /auth but higher than general routes
+    middlewares:
+      - "keycloak-headers"
+
+  # MinIO Object Storage API (Production) - for direct file access
   trackify-minio-api:
     domain: "{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
     backend_url: "http://prds301.jokulab.ch:9000"
@@ -104,6 +151,14 @@ traefik_backend_services:
     health_check: "/minio/health/ready"
     strip_prefix: true
 
+  # MinIO Object Storage Console (Production)
+  trackify-minio:
+    domain: "{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
+    backend_url: "http://prds301.jokulab.ch:9001"
+    path_prefix: "/minio"
+    health_check: "/minio/health/live"
+    strip_prefix: true
+    
   # MinIO Object Storage Console (Development)
   trackify-minio-dev:
     domain: "{{ traefik_trackify_dev_subdomain }}.{{ traefik_domain }}"
@@ -129,10 +184,26 @@ traefik_security_headers:
   stsPreload: true
   stsSeconds: 31536000
 
+# Keycloak-specific security headers
+traefik_keycloak_headers:
+  customRequestHeaders:
+    X-Forwarded-Proto: "https"
+    X-Forwarded-Host: "{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
+    X-Forwarded-Port: "443"
+  customResponseHeaders:
+    X-Content-Type-Options: "nosniff"
+    X-Frame-Options: "SAMEORIGIN"  # Less restrictive for Keycloak admin
+    Referrer-Policy: "strict-origin-when-cross-origin"
+
 # Rate limiting
 traefik_rate_limit_enabled: true
 traefik_rate_limit_burst: 100
 traefik_rate_limit_average: 50
+
+# Keycloak-specific rate limiting (more lenient for auth)
+traefik_keycloak_rate_limit:
+  burst: 200
+  average: 100
 
 # Monitoring
 traefik_metrics_enabled: true
@@ -142,3 +213,13 @@ traefik_metrics_prometheus_enabled: true
 traefik_configure_firewall: true
 traefik_firewall_zone: dmz
 traefik_selinux_enabled: true
+
+# Admin authentication for Keycloak admin console
+traefik_keycloak_admin_user: "keycloak-admin"
+traefik_keycloak_admin_password: "{{ vault_keycloak_admin_console_password | default('changeme') }}"
+
+# Path-based routing configuration
+traefik_keycloak_paths:
+  auth: "/auth"
+  admin: "/admin"
+  health: "/health"
