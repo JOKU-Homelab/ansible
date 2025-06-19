@@ -8,6 +8,8 @@ Wants=network-online.target
 Type=simple
 User={{ traefik_user }}
 Group={{ traefik_group }}
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 {% if traefik_dns_provider == "cloudflare" %}
 EnvironmentFile={{ traefik_config_dir }}/cloudflare/cloudflare.env
 {% endif %}

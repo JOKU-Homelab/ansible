@@ -27,7 +27,7 @@ traefik_entrypoints:
     address: ":443"
 
 # Dashboard configuration
-traefik_dashboard_enabled: true
+traefik_dashboard_enabled: false
 traefik_dashboard_port: 8080
 traefik_dashboard_auth_enabled: true
 traefik_dashboard_user: admin
