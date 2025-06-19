@@ -25,9 +25,9 @@
   block:
     - name: Check if API token is provided
       fail:
-        msg: "Either traefik_cloudflare_api_token or both traefik_cloudflare_email and traefik_cloudflare_api_key must be provided"
+        msg: "Either traefik_cloudflare_dns_api_token or both traefik_cloudflare_email and traefik_cloudflare_api_key must be provided"
       when:
-        - traefik_cloudflare_api_token == ""
+        - traefik_cloudflare_dns_api_token == ""
         - (traefik_cloudflare_email == "" or traefik_cloudflare_api_key == "")
 
     - name: Warn about deprecated API key usage
