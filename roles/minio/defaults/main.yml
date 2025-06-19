@@ -37,11 +37,25 @@ minio_buckets:
   - name: trackify-attachments
     policy: download
 
+# MinIO policies to create
+minio_policies:
+  - name: trackify-readwrite
+    statements:
+      - Effect: Allow
+        Action:
+          - "s3:GetObject"
+          - "s3:PutObject"
+          - "s3:DeleteObject"
+          - "s3:ListBucket"
+        Resource:
+          - "arn:aws:s3:::trackify-attachments"
+          - "arn:aws:s3:::trackify-attachments/*"
+
 # Default users (override in vault)
 minio_users:
   - username: trackify-app
     password: "{{ trackify_minio_password }}"
-    policy: readwrite
+    policy: trackify-readwrite
 #  - username: trackify-readonly
 #    password: "{{ trackify_readonly_password }}"
 #    policy: readonly

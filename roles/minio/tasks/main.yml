@@ -150,10 +150,27 @@
     - user_creation.rc != 0
     - "'already exists' not in user_creation.stderr"
 
+- name: Create custom MinIO policies
+  shell: |
+    cat <<EOF | mc admin policy create {{ minio_alias }} {{ item.name }} /dev/stdin
+    {
+      "Version": "2012-10-17",
+      "Statement": {{ item.statements | to_json }}
+    }
+    EOF
+  become: true
+  become_user: "{{ minio_user }}"
+  loop: "{{ minio_policies | default([]) }}"
+  register: policy_creation
+  changed_when: "'Policy `{{ item.name }}` is created successfully' in policy_creation.stdout"
+  failed_when:
+    - policy_creation.rc != 0
+    - "'already exists' not in policy_creation.stderr"
+
 - name: Apply policies to users
   command: >
-    /usr/local/bin/mc admin policy set {{ minio_alias }}
-    {{ item.policy }} user={{ item.username }}
+    mc admin policy attach {{ minio_alias }}
+    {{ item.policy }} --user {{ item.username }}
   become: true
   become_user: "{{ minio_user }}"
   loop: "{{ minio_users | default([]) }}"
