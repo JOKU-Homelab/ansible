@@ -88,6 +88,38 @@ traefik_backend_services:
     health_check: "/api/health"
     strip_prefix: false
 
+# MinIO Object Storage API (Production) - for direct file access
+  trackify-minio-api:
+    domain: "{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
+    backend_url: "http://prds301.jokulab.ch:9000"
+    path_prefix: "/files"
+    health_check: "/minio/health/ready"
+    strip_prefix: true
+    
+  # MinIO Object Storage API (Development) - for direct file access  
+  trackify-minio-api-dev:
+    domain: "{{ traefik_trackify_dev_subdomain }}.{{ traefik_domain }}"
+    backend_url: "http://devs301.jokulab.ch:9000"
+    path_prefix: "/files"
+    health_check: "/minio/health/ready"
+    strip_prefix: true
+
+  # MinIO Object Storage Console (Production)
+  trackify-minio:
+    domain: "{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
+    backend_url: "http://prds301.jokulab.ch:9001"
+    path_prefix: "/minio"
+    health_check: "/minio/health/live"
+    strip_prefix: true
+    
+  # MinIO Object Storage Console (Development)
+  trackify-minio-dev:
+    domain: "{{ traefik_trackify_dev_subdomain }}.{{ traefik_domain }}"
+    backend_url: "http://devs301.jokulab.ch:9001"
+    path_prefix: "/minio"
+    health_check: "/minio/health/live"
+    strip_prefix: true
+
 # Logging configuration
 traefik_log_level: INFO
 traefik_access_log_enabled: true

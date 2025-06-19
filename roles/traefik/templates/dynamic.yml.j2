@@ -53,6 +53,15 @@ http:
         accessControlMaxAge: 100
         addVaryHeader: true
 
+    strip-minio-prefix:
+      stripPrefix:
+        prefixes:
+          - "/minio"
+    strip-files-prefix:
+      stripPrefix:
+        prefixes:
+          - "/files"
+
   # Service definitions
   services:
 {% for service_name, service_config in traefik_backend_services.items() %}
@@ -65,6 +74,16 @@ http:
           path: "{{ service_config.health_check }}"
           interval: "30s"
           timeout: "5s"
+{% endif %}
+{% if service_name.endswith('-minio') or service_name.endswith('-minio-dev') %}
+{% if service_config.strip_prefix %}
+        - strip-minio-prefix
+{% endif %}
+{% endif %}
+{% if service_name.endswith('-minio-api') or service_name.endswith('-minio-api-dev') %}
+{% if service_config.strip_prefix %}
+        - strip-files-prefix
+{% endif %}
 {% endif %}
 {% endfor %}
 

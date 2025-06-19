@@ -35,13 +35,16 @@ minio_cache_watermark_high: 90
 # Default buckets to create
 minio_buckets:
   - name: trackify-attachments
-    policy: none
+    policy: download
 
 # Default users (override in vault)
-minio_users: []
-#  - username: trackify-app
-#    password: secure-password
-#    policy: readwrite
+minio_users:
+  - username: trackify-app
+    password: "{{ rackify_minio_password }}"
+    policy: readwrite
+#  - username: trackify-readonly
+#    password: "{{ trackify_readonly_password }}"
+#    policy: readonly
 
 # Monitoring settings
 minio_enable_prometheus: true
@@ -51,3 +54,5 @@ minio_prometheus_auth_type: public
 minio_environment_vars:
   MINIO_PROMETHEUS_AUTH_TYPE: "{{ minio_prometheus_auth_type }}"
   MINIO_BROWSER_REDIRECT_URL: "http://{{ ansible_default_ipv4.address }}:{{ minio_console_port }}"
+  MINIO_API_CORS_ALLOW_ORIGIN: "*"
+
