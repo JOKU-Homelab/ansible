@@ -1,4 +1,3 @@
-
 ---
 - name: Create minio user
   user:
@@ -115,6 +114,14 @@
   become_user: "{{ minio_user }}"
   changed_when: false
 
+- name: Check existing buckets
+  command: /usr/local/bin/mc ls {{ minio_alias }}
+  become: true
+  become_user: "{{ minio_user }}"
+  register: existing_buckets
+  changed_when: false
+  failed_when: false
+
 - name: Create MinIO buckets
   command: >
     /usr/local/bin/mc mb {{ minio_alias }}/{{ item.name }}
@@ -123,9 +130,8 @@
   loop: "{{ minio_buckets }}"
   register: bucket_creation
   changed_when: "'Bucket created successfully' in bucket_creation.stdout"
-  failed_when: 
-    - bucket_creation.rc != 0
-    - "'already exists' not in bucket_creation.stderr"
+  failed_when: false
+  when: "item.name not in existing_buckets.stdout"
 
 - name: Set bucket policies
   command: >
@@ -135,24 +141,21 @@
   become_user: "{{ minio_user }}"
   loop: "{{ minio_buckets }}"
   when: item.policy is defined
-  changed_when: false
+  register: policy_set
+  changed_when: "'Access permission for' in policy_set.stdout and 'is set to' in policy_set.stdout"
+  failed_when: false
 
-- name: Create MinIO users
-  command: >
-    /usr/local/bin/mc admin user add {{ minio_alias }}
-    {{ item.username }} {{ item.password }}
+- name: Check existing users
+  command: /usr/local/bin/mc admin user list {{ minio_alias }}
   become: true
   become_user: "{{ minio_user }}"
-  loop: "{{ minio_users | default([]) }}"
-  register: user_creation
-  changed_when: "'Added user' in user_creation.stdout"
-  failed_when:
-    - user_creation.rc != 0
-    - "'already exists' not in user_creation.stderr"
+  register: existing_users
+  changed_when: false
+  failed_when: false
 
 - name: Create custom MinIO policies
   shell: |
-    cat <<EOF | mc admin policy create {{ minio_alias }} {{ item.name }} /dev/stdin
+    cat <<'EOF' | /usr/local/bin/mc admin policy create {{ minio_alias }} {{ item.name }} /dev/stdin
     {
       "Version": "2012-10-17",
       "Statement": {{ item.statements | to_json }}
@@ -163,16 +166,30 @@
   loop: "{{ minio_policies | default([]) }}"
   register: policy_creation
   changed_when: "'Policy `{{ item.name }}` is created successfully' in policy_creation.stdout"
-  failed_when:
-    - policy_creation.rc != 0
-    - "'already exists' not in policy_creation.stderr"
+  failed_when: false
+
+- name: Create MinIO users
+  command: >
+    /usr/local/bin/mc admin user add {{ minio_alias }}
+    {{ item.username }} {{ item.password }}
+  become: true
+  become_user: "{{ minio_user }}"
+  loop: "{{ minio_users | default([]) }}"
+  register: user_creation
+  changed_when: "'Added user' in user_creation.stdout"
+  failed_when: false
+  when: "item.username not in existing_users.stdout"
 
 - name: Apply policies to users
   command: >
-    mc admin policy attach {{ minio_alias }}
+    /usr/local/bin/mc admin policy attach {{ minio_alias }}
     {{ item.policy }} --user {{ item.username }}
   become: true
   become_user: "{{ minio_user }}"
   loop: "{{ minio_users | default([]) }}"
-  when: item.policy is defined
-  changed_when: false
+  when: 
+    - item.policy is defined
+    - "item.username in existing_users.stdout or user_creation is defined"
+  register: policy_attach
+  changed_when: "'Policy `{{ item.policy }}` is attached to user `{{ item.username }}`' in policy_attach.stdout"
+  failed_when: false
