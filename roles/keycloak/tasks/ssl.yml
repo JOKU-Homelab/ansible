@@ -1,0 +1,49 @@
+---
+- name: Generate SSL keystore for Keycloak
+  block:
+    - name: Create private key for Keycloak
+      openssl_privatekey:
+        path: "{{ keycloak_config_dir }}/keycloak.key"
+        size: 2048
+        owner: "{{ keycloak_user }}"
+        group: "{{ keycloak_group }}"
+        mode: '0600'
+
+    - name: Create certificate signing request
+      openssl_csr:
+        path: "{{ keycloak_config_dir }}/keycloak.csr"
+        privatekey_path: "{{ keycloak_config_dir }}/keycloak.key"
+        common_name: "{{ keycloak_hostname }}"
+        subject_alt_name:
+          - "DNS:{{ keycloak_hostname }}"
+          - "DNS:localhost"
+        owner: "{{ keycloak_user }}"
+        group: "{{ keycloak_group }}"
+        mode: '0644'
+
+    - name: Create self-signed certificate
+      openssl_certificate:
+        path: "{{ keycloak_config_dir }}/keycloak.crt"
+        privatekey_path: "{{ keycloak_config_dir }}/keycloak.key"
+        csr_path: "{{ keycloak_config_dir }}/keycloak.csr"
+        provider: selfsigned
+        owner: "{{ keycloak_user }}"
+        group: "{{ keycloak_group }}"
+        mode: '0644'
+        valid_in: "{{ 365 * 24 * 3600 }}"
+
+    - name: Create PKCS12 keystore
+      openssl_pkcs12:
+        action: export
+        path: "{{ keycloak_ssl_keystore }}"
+        friendly_name: "{{ keycloak_ssl_key_alias }}"
+        privatekey_path: "{{ keycloak_config_dir }}/keycloak.key"
+        certificate_path: "{{ keycloak_config_dir }}/keycloak.crt"
+        passphrase: "{{ keycloak_ssl_keystore_password }}"
+        owner: "{{ keycloak_user }}"
+        group: "{{ keycloak_group }}"
+        mode: '0600'
+
+  when: keycloak_ssl_enabled
+  notify: restart keycloak
+  tags: keycloak_ssl

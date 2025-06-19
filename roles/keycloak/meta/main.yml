@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  author: Trackify Team
+  description: Keycloak Identity and Access Management for Trackify infrastructure
+  company: Trackit ltd.
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+  galaxy_tags:
+    - keycloak
+    - identity
+    - authentication
+    - sso
+    - oauth2
+    - oidc
+    - security
+    - trackify
+
+dependencies: []

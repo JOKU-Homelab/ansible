@@ -1,0 +1,74 @@
+---
+- name: Wait for PostgreSQL to be available
+  wait_for:
+    host: "{{ keycloak_db_host }}"
+    port: "{{ keycloak_db_port }}"
+    timeout: 60
+  tags: keycloak_database
+
+- name: Test database connectivity
+  postgresql_ping:
+    db: "postgres"
+    login_host: "{{ keycloak_db_host }}"
+    login_port: "{{ keycloak_db_port }}"
+    login_user: "postgres"
+    login_password: "{{ postgresql_admin_password | default('postgres') }}"
+  delegate_to: "{{ keycloak_db_host }}"
+  tags: keycloak_database
+
+- name: Create Keycloak database
+  postgresql_db:
+    name: "{{ keycloak_db_name }}"
+    encoding: UTF8
+    lc_collate: C
+    lc_ctype: C
+    template: template0
+    state: present
+    login_host: "{{ keycloak_db_host }}"
+    login_port: "{{ keycloak_db_port }}"
+    login_user: "postgres"
+    login_password: "{{ postgresql_admin_password | default('postgres') }}"
+  delegate_to: "{{ keycloak_db_host }}"
+  tags: keycloak_database
+
+- name: Create Keycloak database user
+  postgresql_user:
+    name: "{{ keycloak_db_user }}"
+    password: "{{ keycloak_db_password }}"
+    login_host: "{{ keycloak_db_host }}"
+    login_port: "{{ keycloak_db_port }}"
+    login_user: "postgres"
+    login_password: "{{ postgresql_admin_password | default('postgres') }}"
+    state: present
+  delegate_to: "{{ keycloak_db_host }}"
+  tags: keycloak_database
+
+- name: Grant database privileges to Keycloak user
+  postgresql_privs:
+    db: "{{ keycloak_db_name }}"
+    privs: ALL
+    type: database
+    obj: "{{ keycloak_db_name }}"
+    role: "{{ keycloak_db_user }}"
+    login_host: "{{ keycloak_db_host }}"
+    login_port: "{{ keycloak_db_port }}"
+    login_user: "postgres"
+    login_password: "{{ postgresql_admin_password | default('postgres') }}"
+    state: present
+  delegate_to: "{{ keycloak_db_host }}"
+  tags: keycloak_database
+
+- name: Grant schema privileges to Keycloak user
+  postgresql_privs:
+    db: "{{ keycloak_db_name }}"
+    privs: ALL
+    type: schema
+    obj: "{{ keycloak_db_schema }}"
+    role: "{{ keycloak_db_user }}"
+    login_host: "{{ keycloak_db_host }}"
+    login_port: "{{ keycloak_db_port }}"
+    login_user: "postgres"
+    login_password: "{{ postgresql_admin_password | default('postgres') }}"
+    state: present
+  delegate_to: "{{ keycloak_db_host }}"
+  tags: keycloak_database

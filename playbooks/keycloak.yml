@@ -1,0 +1,8 @@
+---
+- name: Deploy Keycloak Identity and Access Management
+  hosts: "{{ hostname }}"
+  become: true
+  gather_facts: true
+  roles:
+    - role: keycloak
+      tags: keycloak

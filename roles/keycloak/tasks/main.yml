@@ -1,0 +1,34 @@
+---
+- name: Include OS-specific variables
+  include_vars: "{{ ansible_os_family }}.yml"
+  tags: keycloak
+
+- name: Include installation tasks
+  include_tasks: install.yml
+  tags: keycloak
+
+- name: Include configuration tasks
+  include_tasks: configure.yml
+  tags: keycloak
+
+- name: Include database setup tasks
+  include_tasks: database.yml
+  tags: keycloak
+
+- name: Include SSL setup tasks
+  include_tasks: ssl.yml
+  tags: keycloak
+  when: keycloak_ssl_enabled
+
+- name: Include firewall configuration tasks
+  include_tasks: firewall.yml
+  tags: keycloak
+  when: keycloak_configure_firewall
+
+- name: Include service management tasks
+  include_tasks: service.yml
+  tags: keycloak
+
+- name: Include realm and client configuration tasks
+  include_tasks: realm-config.yml
+  tags: keycloak

@@ -1,0 +1,85 @@
+---
+- name: Install required packages
+  dnf:
+    name: "{{ keycloak_packages }}"
+    state: present
+  tags: keycloak_install
+
+- name: Create keycloak group
+  group:
+    name: "{{ keycloak_group }}"
+    state: present
+  tags: keycloak_install
+
+- name: Create keycloak user
+  user:
+    name: "{{ keycloak_user }}"
+    group: "{{ keycloak_group }}"
+    system: yes
+    shell: /bin/bash
+    home: "{{ keycloak_home_dir }}"
+    create_home: no
+  tags: keycloak_install
+
+- name: Create keycloak directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ keycloak_user }}"
+    group: "{{ keycloak_group }}"
+    mode: '0755'
+  loop:
+    - "{{ keycloak_home_dir }}"
+    - "{{ keycloak_config_dir }}"
+    - "{{ keycloak_data_dir }}"
+    - "{{ keycloak_log_dir }}"
+    - "/tmp/keycloak-install"
+  tags: keycloak_install
+
+- name: Check if Keycloak is already installed
+  stat:
+    path: "{{ keycloak_home_dir }}/bin/kc.sh"
+  register: keycloak_installed
+  tags: keycloak_install
+
+- name: Download Keycloak
+  get_url:
+    url: "{{ keycloak_download_url }}"
+    dest: "/tmp/keycloak-install/{{ keycloak_archive_name }}"
+    mode: '0644'
+    timeout: 300
+  when: not keycloak_installed.stat.exists
+  tags: keycloak_install
+
+- name: Extract Keycloak
+  unarchive:
+    src: "/tmp/keycloak-install/{{ keycloak_archive_name }}"
+    dest: "/tmp/keycloak-install"
+    remote_src: yes
+    creates: "/tmp/keycloak-install/keycloak-{{ keycloak_version }}"
+  when: not keycloak_installed.stat.exists
+  tags: keycloak_install
+
+- name: Copy Keycloak files to installation directory
+  shell: |
+    cp -r /tmp/keycloak-install/keycloak-{{ keycloak_version }}/* {{ keycloak_home_dir }}/
+    chown -R {{ keycloak_user }}:{{ keycloak_group }} {{ keycloak_home_dir }}
+  when: not keycloak_installed.stat.exists
+  tags: keycloak_install
+
+- name: Set executable permissions for Keycloak scripts
+  file:
+    path: "{{ item }}"
+    mode: '0755'
+    owner: "{{ keycloak_user }}"
+    group: "{{ keycloak_group }}"
+  loop:
+    - "{{ keycloak_home_dir }}/bin/kc.sh"
+    - "{{ keycloak_home_dir }}/bin/kcadm.sh"
+  tags: keycloak_install
+
+- name: Clean up installation files
+  file:
+    path: "/tmp/keycloak-install"
+    state: absent
+  tags: keycloak_install

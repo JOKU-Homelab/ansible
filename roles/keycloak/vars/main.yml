@@ -1,0 +1,23 @@
+---
+# Internal variables (should not be overridden)
+keycloak_archive_name: "keycloak-{{ keycloak_version }}.tar.gz"
+keycloak_download_url: "https://github.com/keycloak/keycloak/releases/download/{{ keycloak_version }}/{{ keycloak_archive_name }}"
+keycloak_service_name: "keycloak"
+keycloak_systemd_service_file: "/etc/systemd/system/{{ keycloak_service_name }}.service"
+
+# Required packages
+keycloak_packages:
+  - "{{ java_package }}"
+  - "python3-requests"
+  - "python3-urllib3"
+
+# Database JDBC drivers (PostgreSQL is included in Keycloak 23+)
+keycloak_jdbc_drivers: []
+
+# Configuration file paths
+keycloak_main_config: "{{ keycloak_config_dir }}/keycloak.conf"
+keycloak_cache_config: "{{ keycloak_config_dir }}/{{ keycloak_cache_config_file }}"
+
+# Keycloak CLI
+keycloak_cli: "{{ keycloak_home_dir }}/bin/kcadm.sh"
+keycloak_server_script: "{{ keycloak_home_dir }}/bin/kc.sh"

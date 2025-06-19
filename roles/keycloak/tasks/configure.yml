@@ -1,0 +1,46 @@
+---
+- name: Generate Keycloak configuration file
+  template:
+    src: keycloak.conf.j2
+    dest: "{{ keycloak_main_config }}"
+    owner: "{{ keycloak_user }}"
+    group: "{{ keycloak_group }}"
+    mode: '0640'
+    backup: yes
+  notify: restart keycloak
+  tags: keycloak_config
+
+- name: Generate Keycloak environment file
+  template:
+    src: keycloak.env.j2
+    dest: "{{ keycloak_config_dir }}/keycloak.env"
+    owner: "{{ keycloak_user }}"
+    group: "{{ keycloak_group }}"
+    mode: '0640'
+  notify: restart keycloak
+  tags: keycloak_config
+
+- name: Configure log rotation for Keycloak
+  template:
+    src: keycloak.logrotate.j2
+    dest: /etc/logrotate.d/keycloak
+    owner: root
+    group: root
+    mode: '0644'
+  tags: keycloak_config
+
+- name: Build Keycloak configuration
+  command: "{{ keycloak_server_script }} build"
+  args:
+    chdir: "{{ keycloak_home_dir }}"
+  become_user: "{{ keycloak_user }}"
+  register: keycloak_build_result
+  changed_when: "'Changes detected in configuration' in keycloak_build_result.stdout"
+  notify: restart keycloak
+  tags: keycloak_config
+
+- name: Display build output
+  debug:
+    var: keycloak_build_result.stdout_lines
+  when: keycloak_build_result.stdout_lines is defined
+  tags: keycloak_config

@@ -1,0 +1,44 @@
+[Unit]
+Description=Keycloak Identity and Access Management
+Documentation=https://www.keycloak.org/docs/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+NotifyAccess=all
+User={{ keycloak_user }}
+Group={{ keycloak_group }}
+Environment=LAUNCH_JBOSS_IN_BACKGROUND=1
+EnvironmentFile={{ keycloak_config_dir }}/keycloak.env
+ExecStart={{ keycloak_server_script }} start --optimized
+ExecReload=/bin/kill -HUP $MAINPID
+TimeoutStartSec=300
+TimeoutStopSec=120
+Restart=on-failure
+RestartSec=10
+
+# Working directory
+WorkingDirectory={{ keycloak_home_dir }}
+
+# Output handling
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=keycloak
+
+# Process management
+KillMode=process
+KillSignal=SIGTERM
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths={{ keycloak_data_dir }} {{ keycloak_log_dir }} {{ keycloak_config_dir }}
+
+# Resource limits
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

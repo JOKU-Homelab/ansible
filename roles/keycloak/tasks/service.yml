@@ -1,0 +1,31 @@
+---
+- name: Create Keycloak systemd service file
+  template:
+    src: keycloak.service.j2
+    dest: "{{ keycloak_systemd_service_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - reload systemd
+    - restart keycloak
+  tags: keycloak_service
+
+- name: Start and enable Keycloak service
+  systemd:
+    name: "{{ keycloak_service_name }}"
+    state: "{{ keycloak_service_state }}"
+    enabled: "{{ keycloak_service_enabled }}"
+    daemon_reload: yes
+  tags: keycloak_service
+
+- name: Wait for Keycloak to be ready
+  uri:
+    url: "http://{{ keycloak_bind_address }}:{{ keycloak_port }}/health/ready"
+    method: GET
+    status_code: 200
+  register: keycloak_health
+  until: keycloak_health.status == 200
+  retries: 30
+  delay: 10
+  tags: keycloak_service

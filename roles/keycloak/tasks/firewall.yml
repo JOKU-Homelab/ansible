@@ -1,0 +1,21 @@
+---
+- name: Configure firewall for Keycloak HTTP
+  firewalld:
+    port: "{{ keycloak_port }}/tcp"
+    permanent: yes
+    state: enabled
+    zone: "{{ keycloak_firewall_zone }}"
+    immediate: yes
+  notify: reload firewalld
+  tags: keycloak_firewall
+
+- name: Configure firewall for Keycloak HTTPS
+  firewalld:
+    port: "{{ keycloak_ssl_port }}/tcp"
+    permanent: yes
+    state: enabled
+    zone: "{{ keycloak_firewall_zone }}"
+    immediate: yes
+  notify: reload firewalld
+  when: keycloak_ssl_enabled
+  tags: keycloak_firewall

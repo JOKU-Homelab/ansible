@@ -1,0 +1,12 @@
+{{ keycloak_log_dir }}/*.log {
+    daily
+    missingok
+    rotate 30
+    compress
+    delaycompress
+    notifempty
+    create 0644 {{ keycloak_user }} {{ keycloak_group }}
+    postrotate
+        systemctl reload keycloak > /dev/null 2>&1 || true
+    endscript
+}

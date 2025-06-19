@@ -1,0 +1,12 @@
+---
+# RedHat/AlmaLinux specific variables
+keycloak_packages:
+  - "{{ java_package }}"
+  - "python3-requests"
+  - "python3-urllib3"
+  - "unzip"
+  - "tar"
+
+# Service configuration
+keycloak_service_user: "{{ keycloak_user }}"
+keycloak_service_group: "{{ keycloak_group }}"
