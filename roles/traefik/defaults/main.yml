@@ -104,14 +104,6 @@ traefik_backend_services:
     health_check: "/minio/health/ready"
     strip_prefix: true
 
-  # MinIO Object Storage Console (Production)
-  trackify-minio:
-    domain: "{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
-    backend_url: "http://prds301.jokulab.ch:9001"
-    path_prefix: "/minio"
-    health_check: "/minio/health/live"
-    strip_prefix: true
-    
   # MinIO Object Storage Console (Development)
   trackify-minio-dev:
     domain: "{{ traefik_trackify_dev_subdomain }}.{{ traefik_domain }}"
