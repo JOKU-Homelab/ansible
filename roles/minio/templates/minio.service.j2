@@ -1,0 +1,37 @@
+
+[Unit]
+Description=MinIO Object Storage Server
+Documentation=https://docs.min.io
+Wants=network-online.target
+After=network-online.target
+AssertFileIsExecutable=/usr/local/bin/minio
+
+[Service]
+WorkingDirectory={{ minio_home_dir }}
+
+User={{ minio_user }}
+Group={{ minio_group }}
+
+EnvironmentFile={{ minio_config_dir }}/minio
+ExecStart=/usr/local/bin/minio server $MINIO_OPTS $MINIO_VOLUMES
+
+# Let systemd restart this service always
+Restart=always
+
+# Specifies the maximum file descriptor number that can be opened by this process
+LimitNOFILE=65536
+
+# Specifies the maximum number of threads this process can create
+TasksMax=infinity
+
+# Disable timeout logic and wait until process is stopped
+TimeoutStopSec=infinity
+SendSIGKILL=no
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=minio
+
+[Install]
+WantedBy=multi-user.target

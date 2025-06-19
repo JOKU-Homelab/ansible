@@ -1,0 +1,53 @@
+---
+# MinIO version and download URLs
+minio_version: "RELEASE.2024-01-16T16-07-38Z"
+minio_download_url: "https://dl.min.io/server/minio/release/linux-amd64/minio"
+minio_client_download_url: "https://dl.min.io/client/mc/release/linux-amd64/mc"
+
+# MinIO user and directories
+minio_user: minio
+minio_group: minio
+minio_home_dir: /opt/minio
+minio_data_dir: /opt/minio/data
+minio_config_dir: /etc/minio
+minio_log_dir: /var/log/minio
+
+# MinIO server configuration
+minio_bind_address: "0.0.0.0"
+minio_port: 9000
+minio_console_port: 9001
+minio_alias: trackify-minio
+
+# Authentication (these should be overridden in vars or vault)
+minio_root_user: minioadmin
+minio_root_password: minioadmin123
+
+# Performance settings (SSL handled by Traefik)
+
+# Performance settings
+minio_cache_drives: []
+minio_cache_exclude: ""
+minio_cache_quota: 80
+minio_cache_after: 0
+minio_cache_watermark_low: 70
+minio_cache_watermark_high: 90
+
+# Default buckets to create
+minio_buckets:
+  - name: trackify-attachments
+    policy: none
+
+# Default users (override in vault)
+minio_users: []
+#  - username: trackify-app
+#    password: secure-password
+#    policy: readwrite
+
+# Monitoring settings
+minio_enable_prometheus: true
+minio_prometheus_auth_type: public
+
+# Environment variables
+minio_environment_vars:
+  MINIO_PROMETHEUS_AUTH_TYPE: "{{ minio_prometheus_auth_type }}"
+  MINIO_BROWSER_REDIRECT_URL: "http://{{ ansible_default_ipv4.address }}:{{ minio_console_port }}"

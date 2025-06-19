@@ -1,0 +1,8 @@
+---
+- name: Deploy MinIO Object Storage
+  hosts: "{{ hostname }}"
+  become: true
+  gather_facts: true
+  roles:
+    - role: minio
+      tags: minio

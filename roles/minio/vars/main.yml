@@ -1,0 +1,10 @@
+---
+
+# Distribution-specific variables
+minio_service_user: "{{ minio_user }}"
+minio_service_group: "{{ minio_group }}"
+
+# Command line options
+minio_server_opts: >
+  --address {{ minio_bind_address }}:{{ minio_port }}
+  --console-address {{ minio_bind_address }}:{{ minio_console_port }}

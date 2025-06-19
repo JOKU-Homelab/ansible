@@ -1,0 +1,19 @@
+
+galaxy_info:
+  author: Trackify DevOps Team
+  description: MinIO Object Storage Server deployment
+  company: Trackit ltd.
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+  galaxy_tags:
+    - storage
+    - object-storage
+    - s3
+    - minio
+
+dependencies: []

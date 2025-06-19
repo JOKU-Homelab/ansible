@@ -1,0 +1,161 @@
+
+---
+- name: Create minio user
+  user:
+    name: "{{ minio_user }}"
+    system: true
+    shell: /bin/false
+    home: "{{ minio_home_dir }}"
+    create_home: true
+  become: true
+
+- name: Create minio directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ minio_user }}"
+    group: "{{ minio_user }}"
+    mode: '0755'
+  become: true
+  loop:
+    - "{{ minio_data_dir }}"
+    - "{{ minio_config_dir }}"
+    - "{{ minio_log_dir }}"
+    - /usr/local/bin
+
+- name: Download MinIO server binary
+  get_url:
+    url: "{{ minio_download_url }}"
+    dest: /usr/local/bin/minio
+    mode: '0755'
+    owner: root
+    group: root
+    timeout: 30
+  become: true
+  notify: restart minio
+
+- name: Download MinIO client binary
+  get_url:
+    url: "{{ minio_client_download_url }}"
+    dest: /usr/local/bin/mc
+    mode: '0755'
+    owner: root
+    group: root
+    timeout: 30
+  become: true
+
+- name: Create MinIO configuration file
+  template:
+    src: minio.j2
+    dest: "{{ minio_config_dir }}/minio"
+    owner: "{{ minio_user }}"
+    group: "{{ minio_user }}"
+    mode: '0640'
+  become: true
+  notify: restart minio
+
+- name: Create MinIO systemd service file
+  template:
+    src: minio.service.j2
+    dest: /etc/systemd/system/minio.service
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify:
+    - reload systemd
+    - restart minio
+
+- name: Create MinIO logrotate configuration
+  template:
+    src: minio.logrotate.j2
+    dest: /etc/logrotate.d/minio
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+
+- name: Set proper ownership for MinIO directories
+  file:
+    path: "{{ item }}"
+    owner: "{{ minio_user }}"
+    group: "{{ minio_user }}"
+    recurse: true
+  become: true
+  loop:
+    - "{{ minio_data_dir }}"
+    - "{{ minio_config_dir }}"
+    - "{{ minio_log_dir }}"
+
+- name: Start and enable MinIO service
+  systemd:
+    name: minio
+    state: started
+    enabled: true
+    daemon_reload: true
+  become: true
+
+- name: Wait for MinIO to be ready
+  uri:
+    url: "http://{{ minio_bind_address }}:{{ minio_port }}/minio/health/ready"
+    method: GET
+    status_code: 200
+  register: minio_health
+  until: minio_health.status == 200
+  retries: 30
+  delay: 2
+
+- name: Configure MinIO client alias
+  command: >
+    mc alias set {{ minio_alias }}
+    http://{{ minio_bind_address }}:{{ minio_port }}
+    {{ minio_root_user }}
+    {{ minio_root_password }}
+  become: true
+  become_user: "{{ minio_user }}"
+  changed_when: false
+
+- name: Create MinIO buckets
+  command: >
+    mc mb {{ minio_alias }}/{{ item.name }}
+  become: true
+  become_user: "{{ minio_user }}"
+  loop: "{{ minio_buckets }}"
+  register: bucket_creation
+  changed_when: "'Bucket created successfully' in bucket_creation.stdout"
+  failed_when: 
+    - bucket_creation.rc != 0
+    - "'already exists' not in bucket_creation.stderr"
+
+- name: Set bucket policies
+  command: >
+    mc anonymous set {{ item.policy | default('none') }}
+    {{ minio_alias }}/{{ item.name }}
+  become: true
+  become_user: "{{ minio_user }}"
+  loop: "{{ minio_buckets }}"
+  when: item.policy is defined
+  changed_when: false
+
+- name: Create MinIO users
+  command: >
+    mc admin user add {{ minio_alias }}
+    {{ item.username }} {{ item.password }}
+  become: true
+  become_user: "{{ minio_user }}"
+  loop: "{{ minio_users | default([]) }}"
+  register: user_creation
+  changed_when: "'Added user' in user_creation.stdout"
+  failed_when:
+    - user_creation.rc != 0
+    - "'already exists' not in user_creation.stderr"
+
+- name: Apply policies to users
+  command: >
+    mc admin policy set {{ minio_alias }}
+    {{ item.policy }} user={{ item.username }}
+  become: true
+  become_user: "{{ minio_user }}"
+  loop: "{{ minio_users | default([]) }}"
+  when: item.policy is defined
+  changed_when: false
