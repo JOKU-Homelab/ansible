@@ -13,11 +13,20 @@ postgresql_databases:
     encoding: "UTF8"
     lc_collate: "{{ postgresql_locale | default('C') }}"
     lc_ctype: "{{ postgresql_locale | default('C') }}"
+  - name: "keycloak"
+    encoding: "UTF8"
+    lc_collate: "{{ postgresql_locale | default('C') }}"
+    lc_ctype: "{{ postgresql_locale | default('C') }}"
 
 postgresql_users:
   - name: "{{ trackify_db_user | default('trackify_user') }}"
     password: "{{ trackify_db_password }}"
     db: "{{ trackify_db_name | default('trackify') }}"
+    expires: "infinity"
+    role_attr_flags: "NOSUPERUSER,NOCREATEDB"
+  - name: "keycloak_user"
+    password: "{{ keycloak_db_password }}"
+    db: "keycloak"
     expires: "infinity"
     role_attr_flags: "NOSUPERUSER,NOCREATEDB"
 
