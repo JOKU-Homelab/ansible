@@ -107,7 +107,7 @@
 
 - name: Configure MinIO client alias
   command: >
-    mc alias set {{ minio_alias }}
+    /usr/local/bin/mc alias set {{ minio_alias }}
     http://{{ minio_bind_address }}:{{ minio_port }}
     {{ minio_root_user }}
     {{ minio_root_password }}
@@ -117,7 +117,7 @@
 
 - name: Create MinIO buckets
   command: >
-    mc mb {{ minio_alias }}/{{ item.name }}
+    /usr/local/bin/mc mb {{ minio_alias }}/{{ item.name }}
   become: true
   become_user: "{{ minio_user }}"
   loop: "{{ minio_buckets }}"
@@ -129,7 +129,7 @@
 
 - name: Set bucket policies
   command: >
-    mc anonymous set {{ item.policy | default('none') }}
+    /usr/local/bin/mc anonymous set {{ item.policy | default('none') }}
     {{ minio_alias }}/{{ item.name }}
   become: true
   become_user: "{{ minio_user }}"
@@ -139,7 +139,7 @@
 
 - name: Create MinIO users
   command: >
-    mc admin user add {{ minio_alias }}
+    /usr/local/bin/mc admin user add {{ minio_alias }}
     {{ item.username }} {{ item.password }}
   become: true
   become_user: "{{ minio_user }}"
@@ -152,7 +152,7 @@
 
 - name: Apply policies to users
   command: >
-    mc admin policy set {{ minio_alias }}
+    /usr/local/bin/mc admin policy set {{ minio_alias }}
     {{ item.policy }} user={{ item.username }}
   become: true
   become_user: "{{ minio_user }}"

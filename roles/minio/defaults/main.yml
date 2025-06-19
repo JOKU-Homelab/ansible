@@ -40,7 +40,7 @@ minio_buckets:
 # Default users (override in vault)
 minio_users:
   - username: trackify-app
-    password: "{{ rackify_minio_password }}"
+    password: "{{ trackify_minio_password }}"
     policy: readwrite
 #  - username: trackify-readonly
 #    password: "{{ trackify_readonly_password }}"
