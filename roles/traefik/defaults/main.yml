@@ -28,7 +28,7 @@ traefik_entrypoints:
 
 # Dashboard configuration
 traefik_dashboard_enabled: false
-traefik_dashboard_port: 8080
+traefik_dashboard_port: 8088
 traefik_dashboard_auth_enabled: true
 traefik_dashboard_user: admin
 traefik_dashboard_password: "{{ vault_traefik_dashboard_password | default('changeme') }}"
@@ -65,25 +65,25 @@ traefik_backend_services:
   # Frontend service (NGINX)
   trackify-frontend:
     domain: "{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
-    backend_url: "http://{{ groups['frontend'][0] if groups['frontend'] is defined and groups['frontend']|length > 0 else 'prdweb01' }}:80"
+    backend_url: "http://prdweb01.jokulab.ch:80"
     health_check: "/health"
     
   trackify-frontend-dev:
     domain: "{{ traefik_trackify_dev_subdomain }}.{{ traefik_domain }}"
-    backend_url: "http://{{ groups['frontend_dev'][0] if groups['frontend_dev'] is defined and groups['frontend_dev']|length > 0 else 'devweb01' }}:80"
+    backend_url: "http://devweb01.jokulab.ch:80"
     health_check: "/health"
     
   # API service (Spring Boot)
   trackify-api:
     domain: "{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
-    backend_url: "http://{{ groups['backend'][0] if groups['backend'] is defined and groups['backend']|length > 0 else 'prdapp01' }}:8080"
+    backend_url: "http://prdapp01.jokulab.ch:8080"
     path_prefix: "/api"
     health_check: "/api/health"
     strip_prefix: false
     
   trackify-api-dev:
     domain: "{{ traefik_trackify_dev_subdomain }}.{{ traefik_domain }}"
-    backend_url: "http://{{ groups['backend_dev'][0] if groups['backend_dev'] is defined and groups['backend_dev']|length > 0 else 'devapp01' }}:8080"
+    backend_url: "http://devapp01.jokulab.ch:8080"
     path_prefix: "/api"
     health_check: "/api/health"
     strip_prefix: false
