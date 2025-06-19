@@ -76,6 +76,8 @@ http:
           timeout: "5s"
 {% endif %}
 
+{% endfor %}
+
   # Router definitions
   routers:
 {% if traefik_dashboard_enabled %}
@@ -125,7 +127,6 @@ http:
         - strip-files-prefix
 {% endif %}
 {% endif %}
-{% endfor %}
 
 {% endfor %}
 
