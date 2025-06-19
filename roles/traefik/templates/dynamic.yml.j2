@@ -75,17 +75,6 @@ http:
           interval: "30s"
           timeout: "5s"
 {% endif %}
-{% if service_name.endswith('-minio') or service_name.endswith('-minio-dev') %}
-{% if service_config.strip_prefix %}
-        - strip-minio-prefix
-{% endif %}
-{% endif %}
-{% if service_name.endswith('-minio-api') or service_name.endswith('-minio-api-dev') %}
-{% if service_config.strip_prefix %}
-        - strip-files-prefix
-{% endif %}
-{% endif %}
-{% endfor %}
 
   # Router definitions
   routers:
@@ -126,6 +115,17 @@ http:
 {% if traefik_rate_limit_enabled %}
         - rate-limit
 {% endif %}
+{% if service_name.endswith('-minio') or service_name.endswith('-minio-dev') %}
+{% if service_config.strip_prefix %}
+        - strip-minio-prefix
+{% endif %}
+{% endif %}
+{% if service_name.endswith('-minio-api') or service_name.endswith('-minio-api-dev') %}
+{% if service_config.strip_prefix %}
+        - strip-files-prefix
+{% endif %}
+{% endif %}
+{% endfor %}
 
 {% endfor %}
 
