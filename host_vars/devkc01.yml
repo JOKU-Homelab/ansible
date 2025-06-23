@@ -9,7 +9,7 @@ keycloak_db_host: "devdb01.jokulab.ch"
 keycloak_db_port: 5432
 
 # Development hostname
-keycloak_hostname: "devkc01.jokulab.ch"
+keycloak_hostname: "devkc01.jokulab.ch:{{ keycloak_port }}"
 
 # Reduced logging for development
 keycloak_log_level: "DEBUG"

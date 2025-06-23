@@ -18,14 +18,31 @@
     enabled: "{{ keycloak_service_enabled }}"
     daemon_reload: yes
   tags: keycloak_service
+  # Don't wait for systemd "active" state, check health endpoint instead
 
-- name: Wait for Keycloak to be ready
+- name: Wait for Keycloak to be ready (health check)
   uri:
     url: "http://{{ keycloak_bind_address }}:{{ keycloak_port }}/health/ready"
     method: GET
     status_code: 200
+    timeout: 10
   register: keycloak_health
   until: keycloak_health.status == 200
-  retries: 30
+  retries: 60  # Increased retries (10 minutes total)
   delay: 10
+  ignore_errors: false
+  tags: keycloak_service
+
+- name: Check Keycloak service status (informational)
+  systemd:
+    name: "{{ keycloak_service_name }}"
+  register: keycloak_service_status
+  tags: keycloak_service
+
+- name: Display Keycloak service status
+  debug:
+    msg: |
+      Keycloak Service Status: {{ keycloak_service_status.status.ActiveState }}
+      Keycloak Health Check: {{ 'HEALTHY' if keycloak_health.status == 200 else 'UNHEALTHY' }}
+      Note: Service may show 'activating' but still be functional if health check passes
   tags: keycloak_service

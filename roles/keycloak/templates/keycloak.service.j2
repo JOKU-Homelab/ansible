@@ -5,15 +5,13 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=notify
-NotifyAccess=all
+Type=exec
 User={{ keycloak_user }}
 Group={{ keycloak_group }}
 Environment=LAUNCH_JBOSS_IN_BACKGROUND=1
 EnvironmentFile={{ keycloak_config_dir }}/keycloak.env
 ExecStart={{ keycloak_server_script }} start --optimized
-ExecReload=/bin/kill -HUP $MAINPID
-TimeoutStartSec=300
+TimeoutStartSec=600  # Increased to 10 minutes
 TimeoutStopSec=120
 Restart=on-failure
 RestartSec=10
