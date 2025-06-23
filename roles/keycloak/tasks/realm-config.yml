@@ -41,8 +41,10 @@
   become_user: "{{ keycloak_user }}"
   changed_when: false
   tags: keycloak_realm_config
-  retries: 3
+  retries: 5
   delay: 5
+  register: kcadm_config
+  until: kcadm_config.rc == 0
 
 - name: Create Keycloak realms
   shell: |
