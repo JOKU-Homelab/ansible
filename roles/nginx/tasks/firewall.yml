@@ -7,5 +7,6 @@
     state: enabled
     zone: public
     immediate: yes
+  become: true
   notify: reload firewalld
   tags: nginx_firewall

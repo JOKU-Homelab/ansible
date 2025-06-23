@@ -7,6 +7,7 @@
     state: enabled
     zone: "{{ traefik_firewall_zone }}"
     immediate: yes
+  become: true
   notify: reload firewalld
   tags: traefik_firewall
 
@@ -17,6 +18,7 @@
     state: enabled
     zone: "{{ traefik_firewall_zone }}"
     immediate: yes
+  become: true
   notify: reload firewalld
   tags: traefik_firewall
 
@@ -27,6 +29,7 @@
     state: enabled
     zone: internal
     immediate: yes
+  become: true
   notify: reload firewalld
   when: traefik_dashboard_enabled
   tags: traefik_firewall

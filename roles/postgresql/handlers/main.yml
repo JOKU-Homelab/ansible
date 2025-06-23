@@ -22,3 +22,4 @@
   systemd:
     name: firewalld
     state: reloaded
+  become: true

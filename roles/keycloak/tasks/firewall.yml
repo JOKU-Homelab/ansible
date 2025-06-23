@@ -6,6 +6,7 @@
     state: enabled
     zone: "{{ keycloak_firewall_zone }}"
     immediate: yes
+  become: true
   notify: reload firewalld
   tags: keycloak_firewall
 
@@ -16,6 +17,7 @@
     state: enabled
     zone: "{{ keycloak_firewall_zone }}"
     immediate: yes
+  become: true
   notify: reload firewalld
   when: keycloak_ssl_enabled
   tags: keycloak_firewall
