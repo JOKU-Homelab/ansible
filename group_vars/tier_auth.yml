@@ -15,6 +15,9 @@ keycloak_proxy_mode: "edge"
 keycloak_proxy_headers: true
 keycloak_hostname_strict: false
 
+# Database configuration (references main DB server)
+keycloak_db_host: "{{ 'dev' if inventory_hostname.startswith('dev') else 'prd' }}db01.jokulab.ch"
+
 # Theme and branding
 keycloak_default_theme: "keycloak"
 keycloak_admin_theme: "keycloak"
