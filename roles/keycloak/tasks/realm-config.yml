@@ -10,128 +10,189 @@
   delay: 10
   tags: keycloak_realm_config
 
-- name: Create admin user if not exists
-  shell: |
-    {{ keycloak_home_dir }}/bin/kcadm.sh config credentials \
-      --server http://{{ keycloak_bind_address }}:{{ keycloak_port }} \
-      --realm master \
-      --user {{ keycloak_admin_user }} \
-      --password {{ keycloak_admin_password }} 2>/dev/null || \
-    KEYCLOAK_ADMIN={{ keycloak_admin_user }} \
-    KEYCLOAK_ADMIN_PASSWORD={{ keycloak_admin_password }} \
-    {{ keycloak_server_script }} start --optimized &
-    sleep 30 && pkill -f keycloak
-  args:
-    chdir: "{{ keycloak_home_dir }}"
-  become_user: "{{ keycloak_user }}"
-  register: admin_setup
-  changed_when: "'Created new user' in admin_setup.stdout or admin_setup.rc == 0"
+- name: Check if initial admin user exists
+  uri:
+    url: "http://{{ keycloak_bind_address }}:{{ keycloak_port }}/admin/realms/master"
+    method: GET
+    status_code: [200, 401, 403]
+    user: "{{ keycloak_admin_user }}"
+    password: "{{ keycloak_admin_password }}"
+    force_basic_auth: yes
+  register: admin_check
   failed_when: false
   tags: keycloak_realm_config
 
-- name: Configure kcadm.sh for authentication
+- name: Create initial admin user if needed
+  shell: |
+    export KEYCLOAK_ADMIN={{ keycloak_admin_user }}
+    export KEYCLOAK_ADMIN_PASSWORD={{ keycloak_admin_password }}
+    {{ keycloak_server_script }} start-dev --hostname-port={{ keycloak_port }} &
+    KEYCLOAK_PID=$!
+    sleep 45
+    kill $KEYCLOAK_PID 2>/dev/null || true
+    wait $KEYCLOAK_PID 2>/dev/null || true
+  args:
+    chdir: "{{ keycloak_home_dir }}"
+  become_user: "{{ keycloak_user }}"
+  when: admin_check.status != 200
+  register: admin_setup
+  changed_when: true
+  tags: keycloak_realm_config
+
+- name: Wait for Keycloak to be ready after admin setup
+  uri:
+    url: "http://{{ keycloak_bind_address }}:{{ keycloak_port }}/health/ready"
+    method: GET
+    status_code: 200
+  register: keycloak_health_after_setup
+  until: keycloak_health_after_setup.status == 200
+  retries: 30
+  delay: 10
+  when: admin_setup is changed
+  tags: keycloak_realm_config
+
+- name: Configure kcadm.sh credentials and test connection
   shell: |
     {{ keycloak_cli }} config credentials \
       --server http://{{ keycloak_bind_address }}:{{ keycloak_port }} \
       --realm master \
       --user {{ keycloak_admin_user }} \
       --password {{ keycloak_admin_password }}
+    
+    # Test the connection
+    {{ keycloak_cli }} get realms/master --fields realm,enabled
   args:
     chdir: "{{ keycloak_home_dir }}"
   become_user: "{{ keycloak_user }}"
-  changed_when: false
-  tags: keycloak_realm_config
-  retries: 5
-  delay: 5
   register: kcadm_config
   until: kcadm_config.rc == 0
+  retries: 10
+  delay: 5
+  changed_when: false
+  tags: keycloak_realm_config
 
-- name: Create Keycloak realms
+- name: Check if realm already exists
   shell: |
-    {{ keycloak_cli }} create realms \
-      -s realm={{ item.name }} \
-      -s displayName="{{ item.display_name }}" \
-      -s enabled={{ item.enabled | lower }} \
-      -s defaultLocale={{ item.default_locale | default('en') }} \
-      -s loginTheme={{ item.login_theme | default('keycloak') }} \
-      -s adminTheme={{ item.admin_theme | default('keycloak') }} \
-      -s accountTheme={{ item.account_theme | default('keycloak') }} \
-      -s emailTheme={{ item.email_theme | default('keycloak') }} \
-      --no-config
+    {{ keycloak_cli }} get realms/{{ item.name }} --fields realm 2>/dev/null || echo "REALM_NOT_FOUND"
   args:
     chdir: "{{ keycloak_home_dir }}"
   become_user: "{{ keycloak_user }}"
   loop: "{{ keycloak_realms }}"
+  register: realm_check
+  changed_when: false
+  failed_when: false
+  tags: keycloak_realm_config
+
+- name: Create Keycloak realms
+  shell: |
+    {{ keycloak_cli }} create realms \
+      -s realm={{ item.item.name }} \
+      -s displayName="{{ item.item.display_name }}" \
+      -s enabled={{ item.item.enabled | lower }} \
+      -s defaultLocale={{ item.item.default_locale | default('en') }} \
+      -s loginTheme={{ item.item.login_theme | default('keycloak') }} \
+      -s adminTheme={{ item.item.admin_theme | default('keycloak') }} \
+      -s accountTheme={{ item.item.account_theme | default('keycloak') }} \
+      -s emailTheme={{ item.item.email_theme | default('keycloak') }}
+  args:
+    chdir: "{{ keycloak_home_dir }}"
+  become_user: "{{ keycloak_user }}"
+  loop: "{{ realm_check.results }}"
+  when: "'REALM_NOT_FOUND' in item.stdout"
   register: realm_creation
-  changed_when: "'Created new realm' in realm_creation.stdout"
-  failed_when: 
-    - realm_creation.rc != 0
-    - "'already exists' not in realm_creation.stderr"
+  changed_when: realm_creation.rc == 0
+  tags: keycloak_realm_config
+
+- name: Check if clients already exist
+  shell: |
+    {{ keycloak_cli }} get clients -r {{ item.realm }} --query clientId={{ item.client_id }} --fields clientId 2>/dev/null | grep -q "{{ item.client_id }}" || echo "CLIENT_NOT_FOUND"
+  args:
+    chdir: "{{ keycloak_home_dir }}"
+  become_user: "{{ keycloak_user }}"
+  loop: "{{ keycloak_clients }}"
+  register: client_check
+  changed_when: false
+  failed_when: false
   tags: keycloak_realm_config
 
 - name: Create Keycloak clients
   shell: |
     {{ keycloak_cli }} create clients \
-      -r {{ item.realm }} \
-      -s clientId={{ item.client_id }} \
-      -s name="{{ item.name }}" \
-      -s enabled={{ item.enabled | lower }} \
-      -s publicClient={{ item.public_client | lower }} \
-      -s standardFlowEnabled={{ item.standard_flow_enabled | lower }} \
-      -s directAccessGrantsEnabled={{ item.direct_access_grants_enabled | lower }} \
-      {% if item.service_accounts_enabled is defined %}-s serviceAccountsEnabled={{ item.service_accounts_enabled | lower }}{% endif %} \
-      {% if item.authorization_services_enabled is defined %}-s authorizationServicesEnabled={{ item.authorization_services_enabled | lower }}{% endif %} \
-      {% if item.valid_redirect_uris is defined %}-s 'redirectUris={{ item.valid_redirect_uris | to_json }}'{% endif %} \
-      {% if item.web_origins is defined %}-s 'webOrigins={{ item.web_origins | to_json }}'{% endif %} \
-      --no-config
+      -r {{ item.item.realm }} \
+      -s clientId={{ item.item.client_id }} \
+      -s name="{{ item.item.name }}" \
+      -s enabled={{ item.item.enabled | lower }} \
+      -s publicClient={{ item.item.public_client | lower }} \
+      -s standardFlowEnabled={{ item.item.standard_flow_enabled | lower }} \
+      -s directAccessGrantsEnabled={{ item.item.direct_access_grants_enabled | lower }} \
+      {% if item.item.service_accounts_enabled is defined %}-s serviceAccountsEnabled={{ item.item.service_accounts_enabled | lower }}{% endif %} \
+      {% if item.item.authorization_services_enabled is defined %}-s authorizationServicesEnabled={{ item.item.authorization_services_enabled | lower }}{% endif %} \
+      {% if item.item.valid_redirect_uris is defined %}-s 'redirectUris={{ item.item.valid_redirect_uris | to_json }}'{% endif %} \
+      {% if item.item.web_origins is defined %}-s 'webOrigins={{ item.item.web_origins | to_json }}'{% endif %}
   args:
     chdir: "{{ keycloak_home_dir }}"
   become_user: "{{ keycloak_user }}"
-  loop: "{{ keycloak_clients }}"
+  loop: "{{ client_check.results }}"
+  when: "'CLIENT_NOT_FOUND' in item.stdout"
   register: client_creation
-  changed_when: "'Created new client' in client_creation.stdout"
-  failed_when: 
-    - client_creation.rc != 0
-    - "'already exists' not in client_creation.stderr"
+  changed_when: client_creation.rc == 0
+  tags: keycloak_realm_config
+
+- name: Check if roles already exist
+  shell: |
+    {{ keycloak_cli }} get roles -r {{ item.realm }} --query name={{ item.name }} --fields name 2>/dev/null | grep -q "{{ item.name }}" || echo "ROLE_NOT_FOUND"
+  args:
+    chdir: "{{ keycloak_home_dir }}"
+  become_user: "{{ keycloak_user }}"
+  loop: "{{ keycloak_roles }}"
+  register: role_check
+  changed_when: false
+  failed_when: false
   tags: keycloak_realm_config
 
 - name: Create Keycloak roles
   shell: |
     {{ keycloak_cli }} create roles \
-      -r {{ item.realm }} \
-      -s name={{ item.name }} \
-      -s description="{{ item.description }}" \
-      --no-config
+      -r {{ item.item.realm }} \
+      -s name={{ item.item.name }} \
+      -s description="{{ item.item.description }}"
   args:
     chdir: "{{ keycloak_home_dir }}"
   become_user: "{{ keycloak_user }}"
-  loop: "{{ keycloak_roles }}"
+  loop: "{{ role_check.results }}"
+  when: "'ROLE_NOT_FOUND' in item.stdout"
   register: role_creation
-  changed_when: "'Created new role' in role_creation.stdout"
-  failed_when: 
-    - role_creation.rc != 0
-    - "'already exists' not in role_creation.stderr"
+  changed_when: role_creation.rc == 0
+  tags: keycloak_realm_config
+
+- name: Check if users already exist
+  shell: |
+    {{ keycloak_cli }} get users -r {{ item.realm }} --query username={{ item.username }} --fields username 2>/dev/null | grep -q "{{ item.username }}" || echo "USER_NOT_FOUND"
+  args:
+    chdir: "{{ keycloak_home_dir }}"
+  become_user: "{{ keycloak_user }}"
+  loop: "{{ keycloak_users }}"
+  register: user_check
+  changed_when: false
+  failed_when: false
   tags: keycloak_realm_config
 
 - name: Create Keycloak users
   shell: |
     {{ keycloak_cli }} create users \
-      -r {{ item.realm }} \
-      -s username={{ item.username }} \
-      -s email={{ item.email }} \
-      -s firstName="{{ item.first_name }}" \
-      -s lastName="{{ item.last_name }}" \
-      -s enabled=true \
-      --no-config
+      -r {{ item.item.realm }} \
+      -s username={{ item.item.username }} \
+      -s email={{ item.item.email }} \
+      -s firstName="{{ item.item.first_name }}" \
+      -s lastName="{{ item.item.last_name }}" \
+      -s enabled=true
   args:
     chdir: "{{ keycloak_home_dir }}"
   become_user: "{{ keycloak_user }}"
-  loop: "{{ keycloak_users }}"
+  loop: "{{ user_check.results }}"
+  when: "'USER_NOT_FOUND' in item.stdout"
   register: user_creation
-  changed_when: "'Created new user' in user_creation.stdout"
-  failed_when: 
-    - user_creation.rc != 0
-    - "'already exists' not in user_creation.stderr"
+  changed_when: user_creation.rc == 0
   tags: keycloak_realm_config
 
 - name: Set user passwords
@@ -139,8 +200,7 @@
     {{ keycloak_cli }} set-password \
       -r {{ item.realm }} \
       --username {{ item.username }} \
-      --new-password {{ item.password }} \
-      --no-config
+      --new-password {{ item.password }}
   args:
     chdir: "{{ keycloak_home_dir }}"
   become_user: "{{ keycloak_user }}"
@@ -149,13 +209,9 @@
   changed_when: true
   tags: keycloak_realm_config
 
-- name: Assign roles to users
+- name: Get user IDs for role assignment
   shell: |
-    {{ keycloak_cli }} add-roles \
-      -r {{ item.0.realm }} \
-      --uusername {{ item.0.username }} \
-      --rolename {{ item.1 }} \
-      --no-config
+    {{ keycloak_cli }} get users -r {{ item.0.realm }} --query username={{ item.0.username }} --fields id | grep -o '"id"[^,]*' | cut -d'"' -f4
   args:
     chdir: "{{ keycloak_home_dir }}"
   become_user: "{{ keycloak_user }}"
@@ -164,8 +220,23 @@
     - roles
     - flags:
       skip_missing: true
+  register: user_ids
+  changed_when: false
+  tags: keycloak_realm_config
+
+- name: Assign roles to users
+  shell: |
+    {{ keycloak_cli }} add-roles \
+      -r {{ item.item.0.realm }} \
+      --uid {{ item.stdout }} \
+      --rolename {{ item.item.1 }}
+  args:
+    chdir: "{{ keycloak_home_dir }}"
+  become_user: "{{ keycloak_user }}"
+  loop: "{{ user_ids.results }}"
+  when: item.stdout != ""
   register: role_assignment
-  changed_when: "'assigned' in role_assignment.stdout"
+  changed_when: role_assignment.rc == 0
   failed_when: 
     - role_assignment.rc != 0
     - "'already assigned' not in role_assignment.stderr"
