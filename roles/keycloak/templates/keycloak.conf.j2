@@ -34,9 +34,11 @@ proxy={{ keycloak_proxy_mode }}
 proxy-headers=xforwarded
 {% endif %}
 
-# Cache settings
+# Cache settings (Updated for Keycloak 23+)
 cache={{ keycloak_cache_stack }}
+{% if keycloak_cache_stack == "ispn" %}
 cache-config-file={{ keycloak_cache_config_file }}
+{% endif %}
 
 # Metrics settings
 {% if keycloak_metrics_enabled %}

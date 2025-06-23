@@ -1,0 +1,47 @@
+---
+# Development Keycloak server configuration
+keycloak_jvm_heap_min: "256m"
+keycloak_jvm_heap_max: "512m"
+keycloak_jvm_metaspace: "128m"
+
+# Database configuration
+keycloak_db_host: "devdb01.jokulab.ch"
+keycloak_db_port: 5432
+
+# Development hostname
+keycloak_hostname: "devkc01.jokulab.ch"
+
+# Reduced logging for development
+keycloak_log_level: "DEBUG"
+
+# Development-specific realm configuration
+keycloak_realms:
+  - name: "trackify-dev"
+    display_name: "Trackify Development"
+    enabled: true
+    default_locale: "en"
+
+# Development client configuration
+keycloak_clients:
+  - client_id: "trackify-frontend-dev"
+    name: "Trackify Frontend Development"
+    realm: "trackify-dev"
+    enabled: true
+    public_client: true
+    standard_flow_enabled: true
+    direct_access_grants_enabled: false
+    valid_redirect_uris:
+      - "https://trackify-dev.jokulab.ch/*"
+      - "http://localhost:3000/*"
+    web_origins:
+      - "https://trackify-dev.jokulab.ch"
+      - "http://localhost:3000"
+
+  - client_id: "trackify-backend-dev"
+    name: "Trackify Backend Development"
+    realm: "trackify-dev"
+    enabled: true
+    public_client: false
+    service_accounts_enabled: true
+    standard_flow_enabled: false
+    direct_access_grants_enabled: true

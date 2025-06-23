@@ -1,0 +1,47 @@
+---
+# Production Keycloak server configuration
+keycloak_jvm_heap_min: "1024m"
+keycloak_jvm_heap_max: "2048m"
+keycloak_jvm_metaspace: "512m"
+
+# Production hostname
+keycloak_hostname: "prdkc01.jokulab.ch"
+
+# Production logging
+keycloak_log_level: "INFO"
+keycloak_access_log_enabled: true
+
+# Enhanced security for production
+keycloak_hostname_strict: true
+keycloak_hostname_strict_https: true
+
+# Production realm configuration  
+keycloak_realms:
+  - name: "trackify"
+    display_name: "Trackify Production"
+    enabled: true
+    default_locale: "en"
+
+# Production client configuration
+keycloak_clients:
+  - client_id: "trackify-frontend"
+    name: "Trackify Frontend Application"
+    realm: "trackify"
+    enabled: true
+    public_client: true
+    standard_flow_enabled: true
+    direct_access_grants_enabled: false
+    valid_redirect_uris:
+      - "https://trackify.jokulab.ch/*"
+    web_origins:
+      - "https://trackify.jokulab.ch"
+
+  - client_id: "trackify-backend"
+    name: "Trackify Backend API"
+    realm: "trackify"
+    enabled: true
+    public_client: false
+    service_accounts_enabled: true
+    authorization_services_enabled: true
+    standard_flow_enabled: false
+    direct_access_grants_enabled: true
