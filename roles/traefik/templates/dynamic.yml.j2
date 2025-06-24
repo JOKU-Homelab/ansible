@@ -78,12 +78,6 @@ http:
         usersFile: "{{ traefik_config_dir }}/.htpasswd"
 {% endif %}
 
-    # Keycloak admin authentication
-    keycloak-admin-auth:
-      basicAuth:
-        users:
-          - "{{ traefik_keycloak_admin_user }}:{{ traefik_keycloak_admin_password | password_hash('bcrypt') }}"
-
     # CORS middleware for API
     cors-headers:
       headers:
@@ -109,6 +103,16 @@ http:
       stripPrefix:
         prefixes:
           - "/files"
+
+    strip-auth-prefix:
+      stripPrefix:
+        prefixes:
+          - "/auth"
+
+    strip-admin-prefix:
+      stripPrefix:
+        prefixes:
+          - "/admin"
 
   # Service definitions
   services:

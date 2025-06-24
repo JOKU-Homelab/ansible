@@ -99,6 +99,7 @@ traefik_backend_services:
     middlewares:
       - "keycloak-headers"
       - "keycloak-cors"
+      - "strip-auth-prefix"
     
   # Keycloak Identity and Access Management (Development)
   trackify-keycloak-dev:
@@ -111,6 +112,7 @@ traefik_backend_services:
     middlewares:
       - "keycloak-headers"
       - "keycloak-cors"
+      - "strip-auth-prefix"
 
   # Keycloak Admin Console (Production) - Admin path
   trackify-keycloak-admin:
@@ -121,8 +123,8 @@ traefik_backend_services:
     strip_prefix: false
     priority: 90  # Lower priority than /auth but higher than general routes
     middlewares:
-      - "keycloak-admin-auth"
       - "keycloak-headers"
+      - "strip-admin-prefix"
 
   # Keycloak Admin Console (Development) - Admin path
   trackify-keycloak-admin-dev:
@@ -134,6 +136,7 @@ traefik_backend_services:
     priority: 90  # Lower priority than /auth but higher than general routes
     middlewares:
       - "keycloak-headers"
+      - "strip-admin-prefix"
 
   # MinIO Object Storage API (Production) - for direct file access
   trackify-minio-api:
@@ -213,10 +216,6 @@ traefik_metrics_prometheus_enabled: true
 traefik_configure_firewall: true
 traefik_firewall_zone: dmz
 traefik_selinux_enabled: true
-
-# Admin authentication for Keycloak admin console
-traefik_keycloak_admin_user: "keycloak-admin"
-traefik_keycloak_admin_password: "{{ vault_keycloak_admin_console_password | default('changeme') }}"
 
 # Path-based routing configuration
 traefik_keycloak_paths:
