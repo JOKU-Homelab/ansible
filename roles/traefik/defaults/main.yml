@@ -163,11 +163,10 @@ traefik_security_headers:
 traefik_keycloak_headers:
   customRequestHeaders:
     X-Forwarded-Proto: "https"
-    X-Forwarded-Host: "{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
+    X-Forwarded-Host: "keycloak.{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
     X-Forwarded-Port: "443"
   customResponseHeaders:
     X-Content-Type-Options: "nosniff"
-    X-Frame-Options: "SAMEORIGIN"  # Less restrictive for Keycloak admin
     Referrer-Policy: "strict-origin-when-cross-origin"
 
 # Rate limiting
