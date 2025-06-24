@@ -16,7 +16,7 @@ java_package: "java-21-openjdk-headless"
 keycloak_bind_address: "0.0.0.0"
 keycloak_port: 8080
 keycloak_ssl_port: 8443
-keycloak_hostname: "{{ inventory_hostname }}.jokulab.ch:{{ keycloak_port }}"
+keycloak_hostname: "keycloak.trackify{{ '-dev' if inventory_hostname.startswith('dev')  }}.jokulab.ch"
 keycloak_hostname_strict: false
 keycloak_hostname_strict_https: false
 

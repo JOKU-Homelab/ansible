@@ -5,7 +5,7 @@ keycloak_jvm_heap_max: "2048m"
 keycloak_jvm_metaspace: "512m"
 
 # Production hostname
-keycloak_hostname: "prdkc01.jokulab.ch"
+keycloak_hostname: "keycloak.trackify.jokulab.ch"
 
 # Production logging
 keycloak_log_level: "INFO"

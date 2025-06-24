@@ -12,7 +12,7 @@ keycloak_db_user: "keycloak_user"
 keycloak_db_password: "{{ keycloak_db_password | default('keycloak123') }}"
 
 # Development hostname (IMPORTANT: Remove port from hostname)
-keycloak_hostname: "devkc01.jokulab.ch"
+keycloak_hostname: "keycloak.trackify-dev.jokulab.ch"
 
 # Proxy configuration for Traefik
 keycloak_proxy_mode: "edge"

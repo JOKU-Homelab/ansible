@@ -90,53 +90,25 @@ traefik_backend_services:
 
   # Keycloak Identity and Access Management (Production)
   trackify-keycloak:
-    domain: "{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
+    domain: "keycloak.{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
     backend_url: "http://prdkc01.jokulab.ch:8080"
-    path_prefix: "/auth"
     health_check: "/health/ready"
     strip_prefix: false
     priority: 100  # Higher priority for auth routes
     middlewares:
       - "keycloak-headers"
       - "keycloak-cors"
-      - "strip-auth-prefix"
     
   # Keycloak Identity and Access Management (Development)
   trackify-keycloak-dev:
-    domain: "{{ traefik_trackify_dev_subdomain }}.{{ traefik_domain }}"
+    domain: "keycloak.{{ traefik_trackify_dev_subdomain }}.{{ traefik_domain }}"
     backend_url: "http://devkc01.jokulab.ch:8080"
-    path_prefix: "/auth"
     health_check: "/health/ready"
     strip_prefix: false
     priority: 100  # Higher priority for auth routes
     middlewares:
       - "keycloak-headers"
       - "keycloak-cors"
-      - "strip-auth-prefix"
-
-  # Keycloak Admin Console (Production) - Admin path
-  trackify-keycloak-admin:
-    domain: "{{ traefik_trackify_subdomain }}.{{ traefik_domain }}"
-    backend_url: "http://prdkc01.jokulab.ch:8080"
-    path_prefix: "/admin"
-    health_check: "/health/ready"
-    strip_prefix: false
-    priority: 90  # Lower priority than /auth but higher than general routes
-    middlewares:
-      - "keycloak-headers"
-      - "strip-admin-prefix"
-
-  # Keycloak Admin Console (Development) - Admin path
-  trackify-keycloak-admin-dev:
-    domain: "{{ traefik_trackify_dev_subdomain }}.{{ traefik_domain }}"
-    backend_url: "http://devkc01.jokulab.ch:8080"
-    path_prefix: "/admin"
-    health_check: "/health/ready"
-    strip_prefix: false
-    priority: 90  # Lower priority than /auth but higher than general routes
-    middlewares:
-      - "keycloak-headers"
-      - "strip-admin-prefix"
 
   # MinIO Object Storage API (Production) - for direct file access
   trackify-minio-api:

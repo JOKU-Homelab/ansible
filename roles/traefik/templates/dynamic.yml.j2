@@ -25,12 +25,12 @@ http:
     # Keycloak-specific headers
     keycloak-headers:
       headers:
-{% for key, value in traefik_keycloak_headers.customRequestHeaders.items() %}
         customRequestHeaders:
+{% for key, value in traefik_keycloak_headers.customRequestHeaders.items() %}
           {{ key }}: "{{ value }}"
 {% endfor %}
-{% for key, value in traefik_keycloak_headers.customResponseHeaders.items() %}
         customResponseHeaders:
+{% for key, value in traefik_keycloak_headers.customResponseHeaders.items() %}
           {{ key }}: "{{ value }}"
 {% endfor %}
 
@@ -103,16 +103,6 @@ http:
       stripPrefix:
         prefixes:
           - "/files"
-
-    strip-auth-prefix:
-      stripPrefix:
-        prefixes:
-          - "/auth"
-
-    strip-admin-prefix:
-      stripPrefix:
-        prefixes:
-          - "/admin"
 
   # Service definitions
   services:
