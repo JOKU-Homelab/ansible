@@ -1,0 +1,49 @@
+
+---
+- name: Create Spring Boot systemd service file
+  template:
+    src: spring-boot.service.j2
+    dest: "/etc/systemd/system/{{ spring_boot_service_name }}.service"
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - reload firewalld
+    - restart spring-boot
+  tags: spring_boot_service
+
+- name: Start and enable Spring Boot service
+  systemd:
+    name: "{{ spring_boot_service_name }}"
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  tags: spring_boot_service
+
+- name: Wait for Spring Boot to be ready (health check)
+  uri:
+    url: "http://{{ ansible_default_ipv4.address }}:{{ spring_boot_port }}{{ spring_boot_health_check_path }}"
+    method: GET
+    status_code: 200
+    timeout: 10
+  register: spring_boot_health
+  until: spring_boot_health.status == 200
+  retries: 30
+  delay: 10
+  ignore_errors: false
+  when: spring_boot_health_check_enabled
+  tags: spring_boot_service
+
+- name: Check Spring Boot service status
+  systemd:
+    name: "{{ spring_boot_service_name }}"
+  register: spring_boot_service_status
+  tags: spring_boot_service
+
+- name: Display Spring Boot service status
+  debug:
+    msg: |
+      Spring Boot Service Status: {{ spring_boot_service_status.status.ActiveState }}
+      Health Check: {{ 'HEALTHY' if spring_boot_health.status == 200 else 'UNHEALTHY' }}
+      Application URL: http://{{ ansible_default_ipv4.address }}:{{ spring_boot_port }}
+  tags: spring_boot_service

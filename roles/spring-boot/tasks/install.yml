@@ -1,0 +1,38 @@
+
+---
+- name: Install required packages for Spring Boot
+  dnf:
+    name: "{{ spring_boot_packages }}"
+    state: present
+  tags: spring_boot_install
+
+- name: Create spring boot user and group
+  group:
+    name: "{{ spring_boot_group }}"
+    state: present
+  tags: spring_boot_install
+
+- name: Create spring boot user
+  user:
+    name: "{{ spring_boot_user }}"
+    group: "{{ spring_boot_group }}"
+    system: yes
+    shell: /bin/bash
+    home: "{{ spring_boot_home_dir }}"
+    createhome: yes
+  tags: spring_boot_install
+
+- name: Create spring boot directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ spring_boot_user }}"
+    group: "{{ spring_boot_group }}"
+    mode: '0755'
+  loop:
+    - "{{ spring_boot_app_dir }}"
+    - "{{ spring_boot_config_dir }}"
+    - "{{ spring_boot_log_dir }}"
+    - "{{ spring_boot_data_dir }}"
+    - "{{ trackify_backend_source_dir }}"
+  tags: spring_boot_install

@@ -1,0 +1,19 @@
+
+---
+# Development Spring Boot server configuration
+spring_boot_jvm_opts: "-Xms256m -Xmx512m -XX:+UseG1GC"
+spring_boot_log_level: "DEBUG"
+
+# Development database configuration
+trackify_database_host: "devdb01.jokulab.ch"
+trackify_database_password: "{{ vault_dev_trackify_database_password }}"
+
+# Development MinIO configuration
+trackify_minio_url: "devs301.jokulab.ch:9000"
+trackify_minio_password: "{{ vault_dev_trackify_minio_password }}"
+
+# Development Keycloak configuration
+trackify_keycloak_client_secret: "{{ vault_dev_trackify_keycloak_client_secret }}"
+
+# Reduced resource limits for development
+maven_opts: "-Xmx512m"

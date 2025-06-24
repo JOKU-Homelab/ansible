@@ -1,0 +1,22 @@
+
+---
+# Production Spring Boot server configuration
+spring_boot_jvm_opts: "-Xms1024m -Xmx2048m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication"
+spring_boot_log_level: "INFO"
+
+# Production database configuration
+trackify_database_host: "prddb01.jokulab.ch"
+trackify_database_password: "{{ vault_prod_trackify_database_password }}"
+
+# Production MinIO configuration
+trackify_minio_url: "prds301.jokulab.ch:9000"
+trackify_minio_password: "{{ vault_prod_trackify_minio_password }}"
+
+# Production Keycloak configuration
+trackify_keycloak_client_secret: "{{ vault_prod_trackify_keycloak_client_secret }}"
+
+# Enhanced security for production
+spring_boot_selinux_enabled: true
+
+# Performance tuning
+maven_opts: "-Xmx2048m -XX:ReservedCodeCacheSize=1024m"

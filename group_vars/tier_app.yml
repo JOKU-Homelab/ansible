@@ -1,0 +1,17 @@
+
+---
+# Application tier configuration
+spring_boot_monitoring_enabled: true
+spring_boot_metrics_enabled: true
+spring_boot_health_enabled: true
+
+# Performance tuning defaults
+spring_boot_jvm_opts_base: "-XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication"
+
+# Security settings
+spring_boot_security_headers_enabled: true
+spring_boot_csrf_protection_enabled: true
+
+# Firewall configuration
+spring_boot_configure_firewall: true
+spring_boot_firewall_zone: "internal"

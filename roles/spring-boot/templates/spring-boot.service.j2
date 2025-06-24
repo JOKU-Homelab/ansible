@@ -1,0 +1,51 @@
+
+[Unit]
+Description=Trackify Spring Boot Backend Application
+Documentation=https://spring.io/projects/spring-boot
+After=network-online.target
+Wants=network-online.target
+After=postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User={{ spring_boot_user }}
+Group={{ spring_boot_group }}
+WorkingDirectory={{ spring_boot_app_dir }}
+
+# Java application command
+ExecStart=/usr/bin/java {{ spring_boot_jvm_opts }} \
+    -Dspring.config.location={{ spring_boot_config_dir }}/ \
+    -Dspring.profiles.active={{ spring_boot_profiles_active }} \
+    -Dlogging.config={{ spring_boot_config_dir }}/logback-spring.xml \
+    -jar {{ spring_boot_app_dir }}/{{ spring_boot_service_name }}.jar
+
+# Process management
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=300
+TimeoutStopSec=60
+KillMode=process
+KillSignal=SIGTERM
+
+# Output handling
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier={{ spring_boot_service_name }}
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths={{ spring_boot_data_dir }} {{ spring_boot_log_dir }}
+
+# Resource limits
+LimitNOFILE=65536
+
+# Environment
+Environment=JAVA_HOME={{ java_home_path }}
+Environment=SPRING_PROFILES_ACTIVE={{ spring_boot_profiles_active }}
+
+[Install]
+WantedBy=multi-user.target

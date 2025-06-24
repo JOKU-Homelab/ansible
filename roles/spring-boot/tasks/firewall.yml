@@ -1,0 +1,24 @@
+
+---
+- name: Configure firewall for Spring Boot HTTP
+  firewalld:
+    port: "{{ spring_boot_port }}/tcp"
+    permanent: yes
+    state: enabled
+    zone: internal
+    immediate: yes
+  become: true
+  notify: reload firewalld
+  tags: spring_boot_firewall
+
+- name: Configure firewall for Spring Boot management port
+  firewalld:
+    port: "{{ spring_boot_management_port }}/tcp"
+    permanent: yes
+    state: enabled
+    zone: internal
+    immediate: yes
+  become: true
+  notify: reload firewalld
+  when: spring_boot_management_port != spring_boot_port
+  tags: spring_boot_firewall

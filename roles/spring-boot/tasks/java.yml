@@ -1,0 +1,65 @@
+
+---
+- name: Install Java Development Kit
+  dnf:
+    name: "{{ java_package }}"
+    state: present
+  tags: spring_boot_java
+
+- name: Verify Java installation
+  command: java --version
+  register: java_version_check
+  changed_when: false
+  tags: spring_boot_java
+
+- name: Display Java version
+  debug:
+    msg: "Java version installed: {{ java_version_check.stdout_lines[0] }}"
+  tags: spring_boot_java
+
+- name: Check if Maven is already installed
+  command: mvn --version
+  register: maven_check
+  failed_when: false
+  changed_when: false
+  tags: spring_boot_java
+
+- name: Download Maven
+  get_url:
+    url: "{{ maven_download_url }}"
+    dest: "/tmp/apache-maven-{{ maven_version }}-bin.tar.gz"
+    mode: '0644'
+  when: maven_check.rc != 0
+  tags: spring_boot_java
+
+- name: Extract Maven
+  unarchive:
+    src: "/tmp/apache-maven-{{ maven_version }}-bin.tar.gz"
+    dest: /opt
+    remote_src: yes
+    creates: "/opt/apache-maven-{{ maven_version }}"
+  when: maven_check.rc != 0
+  tags: spring_boot_java
+
+- name: Create Maven symlink
+  file:
+    src: "/opt/apache-maven-{{ maven_version }}"
+    dest: /opt/maven
+    state: link
+  when: maven_check.rc != 0
+  tags: spring_boot_java
+
+- name: Create Maven environment script
+  template:
+    src: maven.sh.j2
+    dest: /etc/profile.d/maven.sh
+    mode: '0644'
+  when: maven_check.rc != 0
+  tags: spring_boot_java
+
+- name: Clean up Maven download
+  file:
+    path: "/tmp/apache-maven-{{ maven_version }}-bin.tar.gz"
+    state: absent
+  when: maven_check.rc != 0
+  tags: spring_boot_java

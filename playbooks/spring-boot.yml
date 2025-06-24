@@ -1,0 +1,9 @@
+
+---
+- name: Deploy Spring Boot Backend for Trackify
+  hosts: "{{ hostname }}"
+  become: true
+  gather_facts: true
+  roles:
+    - role: spring-boot
+      tags: spring_boot

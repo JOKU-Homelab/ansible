@@ -1,0 +1,4 @@
+
+---
+spring_boot_service_manager: systemd
+spring_boot_config_test_command: "java -jar {{ spring_boot_app_dir }}/{{ spring_boot_service_name }}.jar --help"

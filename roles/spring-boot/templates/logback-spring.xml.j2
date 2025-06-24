@@ -1,0 +1,66 @@
+
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console appender for development -->
+    <springProfile name="dev">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- File appender for production -->
+    <springProfile name="prod">
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>{{ spring_boot_log_dir }}/application.log</file>
+            <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+                <providers>
+                    <timestamp/>
+                    <logLevel/>
+                    <loggerName/>
+                    <message/>
+                    <mdc/>
+                    <stackTrace/>
+                </providers>
+            </encoder>
+            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+                <fileNamePattern>{{ spring_boot_log_dir }}/application.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                    <maxFileSize>10MB</maxFileSize>
+                </timeBasedFileNamingAndTriggeringPolicy>
+                <maxHistory>30</maxHistory>
+                <totalSizeCap>1GB</totalSizeCap>
+            </rollingPolicy>
+        </appender>
+        
+        <!-- Access log appender -->
+        <appender name="ACCESS" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>{{ spring_boot_log_dir }}/access.log</file>
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n</pattern>
+            </encoder>
+            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+                <fileNamePattern>{{ spring_boot_log_dir }}/access.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+                <maxHistory>30</maxHistory>
+            </rollingPolicy>
+        </appender>
+
+        <root level="{{ spring_boot_log_level }}">
+            <appender-ref ref="FILE"/>
+        </root>
+        
+        <logger name="org.springframework.web.filter.CommonsRequestLoggingFilter" level="DEBUG" additivity="false">
+            <appender-ref ref="ACCESS"/>
+        </logger>
+    </springProfile>
+
+    <!-- Application-specific loggers -->
+    <logger name="ch.bbzbl_it" level="{{ 'DEBUG' if inventory_hostname.startswith('dev') else 'INFO' }}"/>
+    <logger name="org.springframework.security" level="{{ 'DEBUG' if inventory_hostname.startswith('dev') else 'WARN' }}"/>
+    <logger name="org.hibernate.SQL" level="{{ 'DEBUG' if inventory_hostname.startswith('dev') else 'WARN' }}"/>
+    <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="{{ 'TRACE' if inventory_hostname.startswith('dev') else 'WARN' }}"/>
+</configuration>

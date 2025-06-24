@@ -1,0 +1,64 @@
+
+---
+- name: Generate Spring Boot application.properties
+  template:
+    src: application.properties.j2
+    dest: "{{ spring_boot_config_dir }}/application.properties"
+    owner: "{{ spring_boot_user }}"
+    group: "{{ spring_boot_group }}"
+    mode: '0640'
+    backup: yes
+  notify: restart spring-boot
+  tags: spring_boot_config
+
+- name: Generate environment-specific configuration
+  template:
+    src: application-profile.properties.j2
+    dest: "{{ spring_boot_config_dir }}/application-{{ spring_boot_profiles_active }}.properties"
+    owner: "{{ spring_boot_user }}"
+    group: "{{ spring_boot_group }}"
+    mode: '0640'
+  notify: restart spring-boot
+  tags: spring_boot_config
+
+- name: Configure logrotate for Spring Boot
+  template:
+    src: spring-boot.logrotate.j2
+    dest: /etc/logrotate.d/{{ spring_boot_service_name }}
+    owner: root
+    group: root
+    mode: '0644'
+  tags: spring_boot_config
+
+- name: Configure SELinux booleans for Spring Boot (if enabled)
+  seboolean:
+    name: "{{ item }}"
+    state: yes
+    persistent: yes
+  loop:
+    - httpd_can_network_connect
+    - httpd_can_network_relay
+    - httpd_read_user_content
+  when: 
+    - ansible_selinux.status == "enabled"
+    - spring_boot_selinux_enabled | default(true)
+  tags: 
+    - spring_boot_config
+    - selinux
+
+- name: Set SELinux file context for Spring Boot directories
+  sefcontext:
+    target: "{{ item.path }}"
+    setype: "{{ item.setype }}"
+    state: present
+  loop:
+    - { path: "{{ spring_boot_app_dir }}(/.*)?", setype: "httpd_exec_t" }
+    - { path: "{{ spring_boot_config_dir }}(/.*)?", setype: "httpd_config_t" }
+    - { path: "{{ spring_boot_log_dir }}(/.*)?", setype: "httpd_log_t" }
+  when: 
+    - ansible_selinux.status == "enabled"
+    - spring_boot_selinux_enabled | default(true)
+  notify: restore selinux contexts
+  tags: 
+    - spring_boot_config
+    - selinux

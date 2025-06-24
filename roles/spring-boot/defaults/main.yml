@@ -1,0 +1,66 @@
+
+---
+# Basic Spring Boot configuration
+spring_boot_user: trackify
+spring_boot_group: trackify
+spring_boot_home_dir: /var/lib/trackify
+spring_boot_app_dir: /opt/trackify-app
+spring_boot_config_dir: /etc/trackify
+spring_boot_log_dir: /var/log/trackify
+spring_boot_data_dir: /var/lib/trackify
+
+# Service configuration
+spring_boot_service_name: "trackify-backend"
+spring_boot_port: 8080
+spring_boot_configure_firewall: true
+spring_boot_selinux_enabled: true
+
+# JVM configuration
+spring_boot_jvm_opts: "-Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+spring_boot_profiles_active: "{{ 'dev' if inventory_hostname.startswith('dev') else 'prod' }}"
+
+# Logging configuration
+spring_boot_log_level: "{{ 'DEBUG' if inventory_hostname.startswith('dev') else 'INFO' }}"
+spring_boot_log_pattern: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Java configuration
+java_version: "21"
+java_package: "java-21-openjdk-devel"
+maven_version: "3.9.6"
+
+# Trackify application configuration
+trackify_backend_git_repo: "https://github.com/bbzbl-it-joku/Module306-Backend.git"
+trackify_backend_source_dir: /opt/trackify-backend
+trackify_backend_jar_name: "module-306-backend-0.0.1-SNAPSHOT.jar"
+
+# Branch selection based on inventory hostname
+trackify_backend_git_branch: "{{ 'dev' if inventory_hostname.startswith('dev') else 'main' }}"
+trackify_backend_production_build: "{{ not inventory_hostname.startswith('dev') }}"
+
+# Database configuration (overridable)
+trackify_database_host: "{{ 'dev' if inventory_hostname.startswith('dev') else 'prd' }}db01.jokulab.ch"
+trackify_database_port: 5432
+trackify_database_name: trackify
+trackify_database_username: trackify_user
+trackify_database_password: "{{ vault_trackify_database_password | default('changeme') }}"
+
+# MinIO configuration (overridable)
+trackify_minio_url: "{{ 'dev' if inventory_hostname.startswith('dev') else 'prd' }}s301.jokulab.ch:9000"
+trackify_minio_username: trackify-app
+trackify_minio_password: "{{ vault_trackify_minio_password | default('changeme') }}"
+
+# Keycloak configuration (overridable)
+trackify_keycloak_base_url: "https://keycloak.trackify{{ '-dev' if inventory_hostname.startswith('dev') }}.jokulab.ch"
+trackify_keycloak_realm: "trackify{{ '-dev' if inventory_hostname.startswith('dev') }}"
+trackify_keycloak_client_id: "trackify-backend{{ '-dev' if inventory_hostname.startswith('dev') }}"
+trackify_keycloak_client_secret: "{{ vault_trackify_keycloak_client_secret | default('changeme') }}"
+
+# Health check configuration
+spring_boot_health_check_enabled: true
+spring_boot_health_check_path: "/actuator/health"
+spring_boot_management_port: "{{ spring_boot_port }}"
+
+# Maven build configuration
+maven_build_profiles: "{{ 'dev' if inventory_hostname.startswith('dev') else 'prod' }}"
+maven_skip_tests: true
+maven_build_opts: "-DskipTests -Dmaven.test.skip=true"
