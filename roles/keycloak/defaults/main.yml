@@ -46,8 +46,8 @@ keycloak_jvm_metaspace: "256m"
 keycloak_jvm_opts: "-XX:+UseG1GC -XX:+UseStringDeduplication -XX:+OptimizeStringConcat"
 
 # Cache configuration (Updated for Keycloak 23+)
-keycloak_cache_stack: "ispn"  # Options: ispn (Infinispan), local
-keycloak_cache_config_file: "cache-ispn.xml"
+keycloak_cache_stack: "local"  # Options: ispn (Infinispan), local
+keycloak_cache_enabled: false 
 
 # Logging configuration
 keycloak_log_level: "INFO"

@@ -11,7 +11,7 @@ Group={{ keycloak_group }}
 Environment=LAUNCH_JBOSS_IN_BACKGROUND=1
 EnvironmentFile={{ keycloak_config_dir }}/keycloak.env
 ExecStart={{ keycloak_server_script }} start --optimized
-TimeoutStartSec=600  # Increased to 10 minutes
+TimeoutStartSec=600
 TimeoutStopSec=120
 Restart=on-failure
 RestartSec=10
@@ -33,10 +33,14 @@ NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectHome=yes
 ProtectSystem=strict
-ReadWritePaths={{ keycloak_data_dir }} {{ keycloak_log_dir }} {{ keycloak_config_dir }}
+ReadWritePaths={{ keycloak_data_dir }} {{ keycloak_log_dir }} {{ keycloak_config_dir }} /tmp
 
 # Resource limits
 LimitNOFILE=65536
+
+# Fix temp directory permissions
+RuntimeDirectory=keycloak
+RuntimeDirectoryMode=0755
 
 [Install]
 WantedBy=multi-user.target

@@ -1,18 +1,29 @@
 ---
 # Development Keycloak server configuration
-keycloak_jvm_heap_min: "256m"
-keycloak_jvm_heap_max: "512m"
-keycloak_jvm_metaspace: "128m"
+keycloak_jvm_heap_min: "512m"
+keycloak_jvm_heap_max: "1024m"
+keycloak_jvm_metaspace: "256m"
 
 # Database configuration
 keycloak_db_host: "devdb01.jokulab.ch"
 keycloak_db_port: 5432
+keycloak_db_name: "keycloak"
+keycloak_db_user: "keycloak_user"
+keycloak_db_password: "{{ keycloak_db_password | default('keycloak123') }}"
 
-# Development hostname
-keycloak_hostname: "devkc01.jokulab.ch:{{ keycloak_port }}"
+# Development hostname (IMPORTANT: Remove port from hostname)
+keycloak_hostname: "devkc01.jokulab.ch"
+
+# Proxy configuration for Traefik
+keycloak_proxy_mode: "edge"
+keycloak_proxy_headers: true
+keycloak_hostname_strict: false
 
 # Reduced logging for development
-keycloak_log_level: "DEBUG"
+keycloak_log_level: "INFO"  # Changed from DEBUG to INFO
+
+# Cache configuration simplified
+keycloak_cache_stack: "local"
 
 # Development-specific realm configuration
 keycloak_realms:
@@ -44,4 +55,4 @@ keycloak_clients:
     public_client: false
     service_accounts_enabled: true
     standard_flow_enabled: false
-    direct_access_grants_enabled: true
+    direct_access_grants_enabled: "refreshTokenMaxReuse"

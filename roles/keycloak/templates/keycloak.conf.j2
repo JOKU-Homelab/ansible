@@ -8,7 +8,6 @@ db-url-port={{ keycloak_db_port }}
 db-url-database={{ keycloak_db_name }}
 db-username={{ keycloak_db_user }}
 db-password={{ keycloak_db_password }}
-db-schema={{ keycloak_db_schema }}
 
 # Hostname settings
 hostname={{ keycloak_hostname }}
@@ -34,11 +33,8 @@ proxy={{ keycloak_proxy_mode }}
 proxy-headers=xforwarded
 {% endif %}
 
-# Cache settings (Updated for Keycloak 23+)
-cache={{ keycloak_cache_stack }}
-{% if keycloak_cache_stack == "ispn" %}
-cache-config-file={{ keycloak_cache_config_file }}
-{% endif %}
+# Cache settings (Simplified for Keycloak 23+)
+cache=local
 
 # Metrics settings
 {% if keycloak_metrics_enabled %}
@@ -54,27 +50,13 @@ health-enabled=true
 log-level={{ keycloak_log_level }}
 log-console-output=default
 log-console-format=%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p [%c] (%t) %s%e%n
-log-console-color=false
-
-{% if keycloak_access_log_enabled %}
-log-file={{ keycloak_log_dir }}/keycloak.log
-{% endif %}
 
 # Development vs Production mode
 {% if inventory_hostname.startswith('dev') %}
-# Development mode settings
-start-dev=false
+# Development mode
 {% else %}
-# Production mode settings
+# Production mode
 {% endif %}
-
-# Security settings
-{% if keycloak_security_headers_enabled %}
-# Security headers will be configured via proxy (Traefik)
-{% endif %}
-
-# Theme settings
-default-theme={{ keycloak_default_theme }}
 
 # Features
 features=token-exchange,admin-fine-grained-authz
